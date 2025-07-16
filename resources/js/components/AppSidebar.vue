@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid,Store,ShoppingCart,ShoppingBasket,Warehouse,Landmark,ClipboardMinus,Settings} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -14,6 +14,100 @@ const mainNavItems: NavItem[] = [
         href: '/dashboard',
         icon: LayoutGrid,
     },
+    {
+        title: 'Store',
+        href: '/store',
+        icon: Store,
+        children: [
+            {
+                title: 'Orders',
+                href: '/store/orders',
+                icon: ShoppingCart,
+                subchildren: [
+                    {
+                        title: 'Orders',
+                        href: '/store/orders',
+                    },
+                    {
+                        title: 'Pos',
+                        href: '/store/pos',
+                    },
+                ]
+            },
+            {
+                title: 'Products',
+                href: '/store/products',
+                icon: ShoppingBasket,
+                subchildren: [
+                    {
+                        title: 'Types',
+                        href: '/store/types',
+                    },
+                    {
+                        title: 'Products',
+                        href: '/store/products',
+                    },
+                ]
+            },
+            {
+                title: 'Stocks',
+                href: '/store/stocks',
+                icon: Warehouse,
+                subchildren: [
+                    {
+                        title: 'Stocks',
+                        href: '/store/stocks',
+                    },
+                    {
+                        title: 'Stock Lists',
+                        href: '/store/stock-lists',
+                    }
+                ]
+            },
+            {
+                title: 'Expenses',
+                href: '/store/expenses',
+                icon: Landmark,
+                subchildren: [
+                    {
+                        title: 'Types',
+                        href: '/store/types',
+                    },
+                    {
+                        title: 'Expenses',
+                        href: '/store/expenses',
+                    }
+                ]
+            },
+            {
+                title: 'Reports',
+                href: '/store/reports',
+                icon: ClipboardMinus,
+                subchildren: [
+                    {
+                        title: 'Reports',
+                        href: '/store/reports',
+                    },
+                    {
+                        title: 'Products Reports',
+                        href: '/store/products-reports',
+                    }
+                ]
+            },
+            {
+                title: 'Settings',
+                href: '/store/settings',
+                icon: Settings,
+            },
+        ],
+    },
+    {
+        title: 'Resturent',
+        href: '/hr',
+        icon: Folder,
+
+    },
+
 ];
 
 const footerNavItems: NavItem[] = [
