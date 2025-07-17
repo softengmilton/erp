@@ -17,5 +17,5 @@ A fresh Laravel 12 application.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-laravel-project.git
+git clone https://github.com/softengmilton/erp.git
 cd your-laravel-project
