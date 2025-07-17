@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
 class StoreProduct extends Model
 {
-    //
+    public function storeProductType()
+    {
+        return $this->belongsTo(StoreProductType::class);
+    }
 }
