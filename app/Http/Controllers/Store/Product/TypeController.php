@@ -14,6 +14,7 @@ class TypeController extends Controller
     public function index()
     {
         $productTypes = \App\Models\StoreProductType::all();
+        // dd($productTypes);
         return Inertia::render('store/product/type/Index', [
             'productTypes' => $productTypes
         ]);

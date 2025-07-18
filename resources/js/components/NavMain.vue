@@ -1,97 +1,128 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/vue3';
-import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from '@/components/ui/sidebar';
+import { ref, onMounted } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
+import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import type { NavItem } from '@/types';
 
-defineProps<{ items: NavItem[] }>();
+defineProps<{
+  items: NavItem[];
+}>();
 
+const openMenus = ref<Record<string, boolean>>({});
 const page = usePage();
-const isActive = (href: string) => page.url.startsWith(href);
 
-// Track expanded items by title
-const expanded = ref<Record<string, boolean>>({});
+function doesPathMatch(item: NavItem, currentPath: string): boolean {
+  if (item.href && currentPath.startsWith(item.href)) {
+    return true;
+  }
+  if (item.children) {
+    return item.children.some(child => doesPathMatch(child, currentPath));
+  }
+  if ('subchildren' in item && item.subchildren) {
+    return item.subchildren.some(sub => doesPathMatch(sub, currentPath));
+  }
+  return false;
+}
 
-const toggle = (title: string) => {
-  expanded.value[title] = !expanded.value[title];
-};
+/**
+ * Open menus that match the current URL path.
+ */
+function openMenusByUrl(items: NavItem[], currentPath: string) {
+  items.forEach(item => {
+    if (doesPathMatch(item, currentPath)) {
+      openMenus.value[item.title] = true;
 
-const isExpanded = (title: string) => expanded.value[title];
+      // Also open children if they match
+      if (item.children) {
+        item.children.forEach(child => {
+          if (doesPathMatch(child, currentPath)) {
+            openMenus.value[child.title] = true;
+          }
+        });
+      }
+    }
+  });
+}
+
+function toggleMenu(title: string) {
+  openMenus.value[title] = !openMenus.value[title];
+}
+
+onMounted(() => {
+  const currentPath = page.url;
+  openMenusByUrl(__props.items, currentPath);
+});
 </script>
 
 <template>
-  <SidebarGroup class="px-2 py-0">
-    <SidebarGroupLabel>Platform</SidebarGroupLabel>
-    <SidebarMenu>
-      <template v-for="item in items" :key="item.title">
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            as-child
-            :is-active="isActive(item.href)"
-            :tooltip="item.title"
-            @click="item.children ? toggle(item.title) : null"
-          >
-            <Link :href="item.href">
-              <component :is="item.icon" />
-              <span>{{ item.title }}</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-
-        <!-- Collapsible children -->
-        <transition name="slide" mode="out-in">
-          <SidebarMenu
-            v-if="item.children && isExpanded(item.title)"
-            class="pl-4"
-          >
-            <template v-for="child in item.children" :key="child.title">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  as-child
-                  :is-active="isActive(child.href)"
-                  :tooltip="child.title"
-                  @click="child.subchildren ? toggle(child.title) : null"
-                >
-                  <Link :href="child.href">
-                    <component :is="child.icon" />
-                    <span>{{ child.title }}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <!-- Subchildren (nested under children) -->
-              <transition name="fade">
-                <SidebarMenu
-                  v-if="child.subchildren && isExpanded(child.title)"
-                  class="pl-4"
-                >
-                  <SidebarMenuItem
-                    v-for="sub in child.subchildren"
-                    :key="sub.title"
+  <ul class="space-y-1">
+    <li v-for="item in items" :key="item.title" class="text-sm">
+      <div v-if="item.children" class="flex flex-col">
+        <button
+          @click="toggleMenu(item.title)"
+          class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-100 rounded"
+        >
+          <div class="flex items-center gap-2">
+            <component :is="item.icon" class="w-4 h-4" />
+            <span>{{ item.title }}</span>
+          </div>
+          <component
+            :is="openMenus[item.title] ? ChevronDown : ChevronRight"
+            class="w-4 h-4"
+          />
+        </button>
+        <ul v-if="openMenus[item.title]" class="pl-6 mt-1 space-y-1">
+          <li v-for="child in item.children" :key="child.title">
+            <div v-if="child.subchildren">
+              <button
+                @click="toggleMenu(child.title)"
+                class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-50 rounded"
+              >
+                <div class="flex items-center gap-2">
+                  <component :is="child.icon" class="w-4 h-4" />
+                  <span>{{ child.title }}</span>
+                </div>
+                <component
+                  :is="openMenus[child.title] ? ChevronDown : ChevronRight"
+                  class="w-4 h-4"
+                />
+              </button>
+              <ul
+                v-if="openMenus[child.title]"
+                class="pl-6 mt-1 space-y-1"
+              >
+                <li v-for="sub in child.subchildren" :key="sub.title">
+                  <Link
+                    :href="sub.href"
+                    class="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded text-sm"
                   >
-                    <SidebarMenuButton
-                      as-child
-                      :is-active="isActive(sub.href)"
-                      :tooltip="sub.title"
-                    >
-                      <Link :href="sub.href">
-                        <span>• {{ sub.title }}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </transition>
-            </template>
-          </SidebarMenu>
-        </transition>
-      </template>
-    </SidebarMenu>
-  </SidebarGroup>
+                    <span>{{ sub.title }}</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div v-else>
+              <Link
+                :href="child.href"
+                class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded text-sm"
+              >
+                <component :is="child.icon" class="w-4 h-4" />
+                <span>{{ child.title }}</span>
+              </Link>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div v-else>
+        <Link
+          :href="item.href"
+          class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded"
+        >
+          <component :is="item.icon" class="w-4 h-4" />
+          <span>{{ item.title }}</span>
+        </Link>
+      </div>
+    </li>
+  </ul>
 </template>
-

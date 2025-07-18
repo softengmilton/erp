@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Product;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
@@ -12,7 +13,8 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+
+        return Inertia::render('store/product/product/Index');
     }
 
     /**
