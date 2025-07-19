@@ -2,7 +2,9 @@
 import { ref, computed } from 'vue';
 import { router, Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
+const editor = ClassicEditor;
 const props = defineProps({
   products: Object, // Laravel paginator object
   productTypes: Array, // List of product types for dropdown
@@ -186,13 +188,6 @@ function goToPage(url) {
                 class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider
                        text-gray-500"
               >
-                Description
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider
-                       text-gray-500"
-              >
                 Product Type
               </th>
               <th
@@ -243,9 +238,6 @@ function goToPage(url) {
                     {{ product.name }}
                   </span>
                 </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                {{ product.description || '-' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ product.store_product_type?.name || '-' }}
@@ -451,14 +443,10 @@ function goToPage(url) {
             <div class="mb-6">
             <label class="block">
                 <span class="block text-sm font-medium text-gray-700 mb-1">Description</span>
-                <textarea
-                v-model="selectedProduct.description"
-                rows="3"
-                placeholder="Product description"
-                class="mt-1 block w-full rounded-md shadow-sm border border-gray-300 px-3 py-2 bg-white/80
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        transition-colors duration-200"
-                ></textarea>
+                  <ckeditor :editor="editor" v-model="selectedProduct.description"
+                :config="{ toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList'] }"
+                />
+
             </label>
             </div>
 
