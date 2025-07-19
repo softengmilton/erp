@@ -38,7 +38,7 @@ const mainNavItems: NavItem[] = [
         subchildren: [
           {
             title: 'Types',
-            href: '/store/types',
+            href: '/store/product-types',
           },
           {
             title: 'Products',
