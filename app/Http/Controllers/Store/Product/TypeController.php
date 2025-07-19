@@ -36,17 +36,15 @@ class TypeController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
+            $request->validate([
                 'name' => 'required|string|max:255|unique:store_product_types,name',
                 'description' => 'nullable|string|max:255',
             ]);
-
-            $productType = new StoreProductType();
-            $productType->name = $validated['name'];
-            $productType->slug = Str::slug($validated['name']);
-            $productType->description = $validated['description'] ?? null;
-            $productType->save();
-
+            $productType = StoreProductType::create([
+                'name' => $request->name,
+                'slug' => Str::slug($request->name),
+                'description' => $request->description,
+            ]);
             return redirect()->back()->with('success', 'Product Type created successfully.');
         } catch (Exception $e) {
             throw $e;
@@ -78,16 +76,15 @@ class TypeController extends Controller
         try {
             $productType = StoreProductType::findOrFail($id);
 
-            $validated = $request->validate([
+            $request->validate([
                 'name' => 'required|string|max:255|unique:store_product_types,name,' . $id,
                 'description' => 'nullable|string|max:255',
             ]);
-
-            $productType->name = $validated['name'];
-            $productType->slug = Str::slug($validated['name']);
-            $productType->description = $validated['description'] ?? null;
-            $productType->save();
-
+            $productType->update([
+                'name' => $request->name,
+                'slug' => Str::slug($request->name),
+                'description' => $request->description,
+            ]);
             return redirect()->back()->with('success', 'Product Type updated successfully.');
         } catch (Exception $e) {
             throw $e;
