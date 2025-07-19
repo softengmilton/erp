@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('description')->nullable();
             $table->string('barcode')->unique()->nullable();
-            $table->enum('unit', ['kg', 'pcs', '500ml', '1 liter', '1.5liter', '2liter', '5liter'])->default('pcs');
+            $table->enum('unit', ['kg', 'pcs', 'ml', 'liter', 'g'])->default('pcs');
             $table->integer('low_stock_alert')->default(10);
             $table->foreignId('store_product_type_id')->constrained('store_product_types')->cascadeOnDelete();
             $table->timestamps();
