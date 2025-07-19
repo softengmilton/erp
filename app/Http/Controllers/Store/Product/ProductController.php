@@ -19,8 +19,8 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $productTypes = StoreProductType::all();
-        $products = StoreProduct::with('primaryImage', 'storeProductType')->paginate(10);
+        $productTypes = StoreProductType::orderByDesc('id')->get();
+        $products = StoreProduct::with('primaryImage', 'storeProductType')->orderByDesc('id')->paginate(10);
 
         return Inertia::render('store/product/product/Index', [
             'products' => $products,

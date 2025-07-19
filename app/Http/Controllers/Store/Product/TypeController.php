@@ -16,7 +16,7 @@ class TypeController extends Controller
      */
     public function index()
     {
-        $productTypes = StoreProductType::paginate(10);
+        $productTypes = StoreProductType::orderByDesc('id')->paginate(10);
         return Inertia::render('store/product/type/Index', [
             'productTypes' => $productTypes
         ]);
