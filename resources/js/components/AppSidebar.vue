@@ -9,106 +9,99 @@ import { BookOpen, Folder, LayoutGrid,Store,ShoppingCart,ShoppingBasket,Warehous
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Store',
-        href: '/store',
-        icon: Store,
-        children: [
-            {
-                title: 'Orders',
-                href: '/store/orders',
-                icon: ShoppingCart,
-                subchildren: [
-                    {
-                        title: 'Orders',
-                        href: '/store/orders',
-                    },
-                    {
-                        title: 'Pos',
-                        href: '/store/pos',
-                    },
-                ]
-            },
-            {
-                title: 'Products',
-                href: '/store/products',
-                icon: ShoppingBasket,
-                subchildren: [
-                    {
-                        title: 'Types',
-                        href: '/store/types',
-                    },
-                    {
-                        title: 'Products',
-                        href: '/store/products',
-                    },
-                ]
-            },
-            {
-                title: 'Stocks',
-                href: '/store/stocks',
-                icon: Warehouse,
-                subchildren: [
-                    {
-                        title: 'Stocks',
-                        href: '/store/stocks',
-                    },
-                    {
-                        title: 'Stock Lists',
-                        href: '/store/stock-lists',
-                    }
-                ]
-            },
-            {
-                title: 'Expenses',
-                href: '/store/expenses',
-                icon: Landmark,
-                subchildren: [
-                    {
-                        title: 'Types',
-                        href: '/store/types',
-                    },
-                    {
-                        title: 'Expenses',
-                        href: '/store/expenses',
-                    }
-                ]
-            },
-            {
-                title: 'Reports',
-                href: '/store/reports',
-                icon: ClipboardMinus,
-                subchildren: [
-                    {
-                        title: 'Reports',
-                        href: '/store/reports',
-                    },
-                    {
-                        title: 'Products Reports',
-                        href: '/store/products-reports',
-                    }
-                ]
-            },
-            {
-                title: 'Settings',
-                href: '/store/settings',
-                icon: Settings,
-            },
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutGrid,
+  },
+  {
+    title: 'Store',
+    icon: Store,
+    children: [
+      {
+        title: 'Orders',
+        icon: ShoppingCart,
+        subchildren: [
+          {
+            title: 'Orders',
+            href: '/store/orders',
+          },
+          {
+            title: 'Pos',
+            href: '/store/pos',
+          },
         ],
-    },
-    {
-        title: 'Resturent',
-        href: '/hr',
-        icon: Folder,
-
-    },
-
+      },
+      {
+        title: 'Products',
+        icon: ShoppingBasket,
+        subchildren: [
+          {
+            title: 'Types',
+            href: '/store/product-types',
+          },
+          {
+            title: 'Products',
+            href: '/store/products',
+          },
+        ],
+      },
+      {
+        title: 'Stocks',
+        icon: Warehouse,
+        subchildren: [
+          {
+            title: 'Stocks',
+            href: '/store/stocks',
+          },
+          {
+            title: 'Stock Lists',
+            href: '/store/stock-lists',
+          },
+        ],
+      },
+      {
+        title: 'Expenses',
+        icon: Landmark,
+        subchildren: [
+          {
+            title: 'Types',
+            href: '/store/expenses-types',
+          },
+          {
+            title: 'Expenses',
+            href: '/store/expenses',
+          },
+        ],
+      },
+      {
+        title: 'Reports',
+        icon: ClipboardMinus,
+        subchildren: [
+          {
+            title: 'Reports',
+            href: '/store/reports',
+          },
+          {
+            title: 'Products Reports',
+            href: '/store/products-reports',
+          },
+        ],
+      },
+      {
+        title: 'Settings',
+        href: '/store/settings',
+        icon: Settings,
+      },
+    ],
+  },
+  {
+    title: 'Resturent',
+    href: '/hr',
+    icon: Folder,
+  },
 ];
+
 
 const footerNavItems: NavItem[] = [
     {

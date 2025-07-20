@@ -1,11 +1,15 @@
 import '../css/app.css';
-
+import 'flowbite';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
+import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'; // ✅ Correct - this is the plugin
+
+
+
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -16,6 +20,7 @@ createInertiaApp({
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
+            .use(CkeditorPlugin)
             .mount(el);
     },
     progress: {

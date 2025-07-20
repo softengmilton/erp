@@ -10,6 +10,6 @@ return [
 
     'allowedMediaRole' => [
         'other',
-        'profile_image',
+        'store_product_image',
     ],
 ];

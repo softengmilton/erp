@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+
 class Model extends  \Illuminate\Database\Eloquent\Model
 {
     protected $guarded = [];
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 }
