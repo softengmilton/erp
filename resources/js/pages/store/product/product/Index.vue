@@ -83,10 +83,6 @@ function removeImage() {
 }
 
 async function saveProduct() {
-  if (!selectedProduct.value.name.trim()) {
-    alert('Name is required');
-    return;
-  }
 
   const formData = new FormData();
 
