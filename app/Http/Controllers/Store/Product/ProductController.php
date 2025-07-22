@@ -10,6 +10,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Redirect;
 
 class ProductController extends Controller
 {
@@ -69,12 +70,16 @@ class ProductController extends Controller
             }
             $product->save();
             DB::commit();
-            // dd($product);
-            return redirect()->back()->with('success', 'Product created successfully');
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Product created successfully',
+            ]);
         } catch (Exception $e) {
             DB::rollback();
-            dd($e->getMessage());
-            return redirect()->back()->with('error', $e->getMessage());
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -129,11 +134,16 @@ class ProductController extends Controller
             }
             $product->update();
             DB::commit();
-            return redirect()->back()->with('success', 'Product updated successfully');
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Product updated successfully',
+            ]);
         } catch (Exception $e) {
             DB::rollback();
-            dd($e->getMessage());
-            return redirect()->back()->with('error', $e->getMessage());
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -146,9 +156,15 @@ class ProductController extends Controller
             $product = StoreProduct::findOrFail($id);
             $product->delete();
             $product->primaryImage()->delete();
-            return redirect()->back()->with('success', 'Product deleted successfully');
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Product deleted successfully',
+            ]);
         } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 }
