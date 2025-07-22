@@ -66,7 +66,7 @@ const mainNavItems: NavItem[] = [
         subchildren: [
           {
             title: 'Types',
-            href: '/store/expenses-types',
+            href: '/store/expense-types',
           },
           {
             title: 'Expenses',

@@ -20,5 +20,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::name('store.')->prefix('store')->group(function () {
         Route::resource('products', \App\Http\Controllers\Store\Product\ProductController::class);
         Route::resource('product-types', \App\Http\Controllers\Store\Product\TypeController::class);
+        
+        Route::resource('expenses',\App\Http\Controllers\Store\Expense\ExpenseController::class);
+        Route::resource('expense-types',\App\Http\Controllers\Store\Expense\TypeController::class);
     });
 });
