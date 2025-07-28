@@ -11,5 +11,6 @@ return [
     'allowedMediaRole' => [
         'other',
         'store_product_image',
+        'store_expense_file',
     ],
 ];

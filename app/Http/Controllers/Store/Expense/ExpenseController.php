@@ -4,15 +4,35 @@ namespace App\Http\Controllers\Store\Expense;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Exception;
+use App\Traits\MediaMan;
+use App\Models\StoreExpenseType;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Models\StoreExpense;
+use Illuminate\Support\Facades\Redirect;
 
 class ExpenseController extends Controller
 {
+    use MediaMan;
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        //
+        $expenses = StoreExpense::with('storeExpenseType')->paginate(10);
+        // $expenses = StoreExpense::all();
+        // dd($expenses);
+        // $expenses = StoreExpenseType::all();
+        $expenseTypes = StoreExpenseType::orderByDesc('id')->get();
+        // $expenseTypes = StoreExpenseType::all();
+
+        return Inertia::render('store/expense/expense/Index', [
+            'expenses' => $expenses,
+            'expenseTypes' => $expenseTypes, 
+        ]);
     }
 
     /**
@@ -26,9 +46,49 @@ class ExpenseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        //
+    public function store(Request $request){
+        // dd($request->all(), $request->file('attachment'), Auth::id());
+
+        $incurredBy = Auth::id();
+
+        try{
+            $request->validate([
+                'name' => 'required|string|max:255|unique:store_expenses',
+                'description' => 'nullable|string',
+                'amount' => 'required|numeric',
+                'attachment' => 'required|max:2048',
+            ]);
+
+            DB::beginTransaction();
+            $expense = StoreExpense::create([
+                'name' => $request->name,
+                'slug' => Str::slug($request->name),
+                'description' => $request->description,
+                'amount' => $request->amount,
+                'store_expense_type_id' => $request->store_expense_type_id,
+                'incurred_by' => $incurredBy,
+            ]);
+
+            if($request->hasFile('attachment')){
+                $attachment = $this->storeFile($request->file('attachment'), 'store_expense_file');
+                $expense->primaryImage()->create([...$attachment, 'media_role' => 'store_expense_file']);
+
+            }
+            $expense->save();
+            DB::commit();
+            return redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Expense created successfully'
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            dd($e);
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -36,7 +96,7 @@ class ExpenseController extends Controller
      */
     public function show(string $id)
     {
-        //
+        
     }
 
     /**
@@ -52,7 +112,52 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        // dd($request->all());
+        $incurredBy = Auth::id();
+
+        $expense = StoreExpense::findOrFail($id);
+
+        try{
+            $request->validate([
+                'name' => 'required|string|max:255|unique:store_expenses',
+                'description' => 'nullable|string',
+                'amount' => 'required|numeric',
+                'attachment' => 'required|max:2048',
+            ]);
+
+            DB::beginTransaction();
+            $expense->update([
+                'name' => $request->name,
+                'slug' => Str::slug($request->name),
+                'description' => $request->description,
+                'amount' => $request->amount,
+                'store_expense_type_id' => $request->store_expense_type_id,
+                'incurred_by' => $incurredBy,
+
+            ]);
+
+            if($request->hasFile('attachment')){
+                $expense->primaryImage()->delete();
+                $attachment = $this->storeFile($request->file('attachment'), 'store_expense_file');
+                $expense->primaryImage()->create([...$attachment, 'media_role' => 'store_expense_file']);
+            }else {
+                $product->primaryImage()->delete();
+            }
+            $expense->update();
+            DB::commit();
+
+            return redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Expense updated successfully',
+            ]);
+           
+        }catch (Exception $e) {
+            DB::rollback();
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -60,6 +165,21 @@ class ExpenseController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        // dd($id);
+        try{
+            $expense = StoreExpense::findOrFail($id);
+            $expense->primaryImage()->delete();
+            $expense->delete();
+
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Expense deleted successfully',
+            ]);
+        } catch (Exception $e) {
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

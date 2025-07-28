@@ -23,5 +23,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         Route::resource('expenses',\App\Http\Controllers\Store\Expense\ExpenseController::class);
         Route::resource('expense-types',\App\Http\Controllers\Store\Expense\TypeController::class);
+
+        Route::resource('orders',\App\Http\Controllers\Store\Order\OrderController::class);
+
+        Route::resource('order-details', \App\Http\Controllers\Store\Order\OrderDetailsController::class);
     });
 });

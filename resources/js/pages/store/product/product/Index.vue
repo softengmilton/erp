@@ -476,17 +476,17 @@ function goToPage(url) {
         class="fixed inset-0 flex items-center justify-center z-50 p-4"
         role="dialog"
         aria-modal="true"
-      >
+        >
         <!-- Glass overlay -->
         <div
           class="fixed inset-0 backdrop-blur-sm"
           @click="closeDeleteConfirm"
-        ></div>
+          ></div>
 
         <!-- Modal content -->
         <div
           class="relative bg-white/90 backdrop-blur-md rounded-lg p-6 w-full max-w-sm shadow-xl border border-white/20"
-        >
+          >
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             Confirm Delete
           </h3>
