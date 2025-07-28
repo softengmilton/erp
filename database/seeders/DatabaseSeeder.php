@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             StoreProductSeeder::class,
             StoreSettingSeeder::class,
             StoreStockSeeder::class,
+            StoreExpenseTypeSeeder::class,
+            StoreExpenseSeeder::class,
         ]);
     }
 }

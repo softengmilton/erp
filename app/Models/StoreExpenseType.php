@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
 class StoreExpenseType extends Model
 {
-    //
+    public function storeExpenses()
+    {
+        return $this->hasMany(StoreExpense::class);
+    }
 }
