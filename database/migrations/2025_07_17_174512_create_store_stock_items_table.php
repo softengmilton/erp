@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('store_product_id')->constrained('store_products')->cascadeOnDelete();
             $table->integer('quantity')->default(0);
             $table->double('unit_cost', 10, 2)->default(0);
+            $table->double('shipping_cost', 10, 2)->default(0);
+            $table->double('other_fees', 10, 2)->default(0);
             $table->double('total_cost', 10, 2)->default(0);
             $table->double('sale_price', 10, 2)->default(0);
             $table->json('adjustment_data')->nullable();
