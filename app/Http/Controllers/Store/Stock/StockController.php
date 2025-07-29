@@ -48,8 +48,12 @@ class StockController extends Controller
             ->select('id', 'name')
             ->orderBy('id', 'desc')
             ->get();
+
+        $nextId = StoreStock::max('id') + 1;
+        $invoiceNumber = 'INV-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
         return Inertia::render('store/stock/stock/Create', [
             'products' => $products,
+            'invoice_number' => $invoiceNumber,
         ]);
     }
 

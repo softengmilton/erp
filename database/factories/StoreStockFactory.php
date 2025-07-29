@@ -19,7 +19,7 @@ class StoreStockFactory extends Factory
     public function definition()
     {
         return [
-            'invoice_number' => $this->faker->unique()->bothify('INV-#####'),
+            'invoice_number' => 'INV-' . date('Y') . '-' . $this->faker->unique()->numerify('####'),
             'supplier_name' => $this->faker->company,
             'total_cost' => 0, // Will be updated after creating items
             'note' => $this->faker->sentence,
