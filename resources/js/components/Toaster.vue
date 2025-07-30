@@ -43,15 +43,15 @@ const toastClass = computed(() => {
 const toastImage = computed(() => {
   switch (toast.value.type) {
     case 'success':
-      return '../assets/img/alert/success.png' // cartoon check
+      return '/assets/img/alert/success.png' // cartoon check
     case 'error':
-      return '../assets/img/alert/error.png' // cartoon error
+      return '/assets/img/alert/error.png' // cartoon error
     case 'info':
-      return '../assets/img/alert/info.png' // cartoon info
+      return '/assets/img/alert/info.png' // cartoon info
     case 'warning':
-      return '../assets/img/alert/warning.png' // cartoon warning
+      return '/assets/img/alert/warning.png' // cartoon warning
     default:
-      return '../assets/img/alert/info.png' // default bubble
+      return '/assets/img/alert/info.png' // default bubble
   }
 })
 

@@ -22,7 +22,6 @@ return new class extends Migration
             $table->double('total_cost', 10, 2)->default(0);
             $table->double('sale_price', 10, 2)->default(0);
             $table->json('adjustment_data')->nullable();
-            $table->string('note')->nullable();
             $table->timestamps();
         });
     }
