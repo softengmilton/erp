@@ -90,14 +90,17 @@ const breadcrumbs = [
             >
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
             <div class="flex items-center gap-3">
+                <Link :href="`/store/stocks/${stock.id}`" class="flex items-center gap-3">
                 <img
-                :src="stock.image_path || '/assets/default/default_invoice.png'"
-                alt="Invoice Image"
-                class="h-10 w-10 rounded object-cover"
+                    :src="stock.image_path || '/assets/default/default_invoice.png'"
+                    alt="Invoice Image"
+                    class="h-10 w-10 rounded object-cover"
                 />
                 <span>{{ stock.invoice_number }}</span>
+                </Link>
             </div>
             </td>
+
 
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ stock.supplier_name || '-' }}

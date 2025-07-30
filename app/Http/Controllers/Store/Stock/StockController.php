@@ -66,7 +66,6 @@ class StockController extends Controller
      */
     public function store(Request $request)
     {
-
         try {
             $validated = $request->validate([
                 'invoice_number' => 'required',
@@ -141,7 +140,8 @@ class StockController extends Controller
      */
     public function show(string $id)
     {
-        //
+
+        return Inertia::render('store/stock/stock/Show');
     }
 
     /**
