@@ -88,9 +88,17 @@ const breadcrumbs = [
               :key="stock.id"
               class="hover:bg-gray-50 transition"
             >
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {{ stock.invoice_number }}
-              </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            <div class="flex items-center gap-3">
+                <img
+                :src="stock.image_path || '/assets/default/default_invoice.png'"
+                alt="Invoice Image"
+                class="h-10 w-10 rounded object-cover"
+                />
+                <span>{{ stock.invoice_number }}</span>
+            </div>
+            </td>
+
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ stock.supplier_name || '-' }}
               </td>
