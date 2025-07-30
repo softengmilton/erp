@@ -55,13 +55,26 @@ const toastImage = computed(() => {
   }
 })
 
+window.addEventListener('toast', (e) => {
+  localStorage.setItem('toast', JSON.stringify(e.detail));
+  toast.value = e.detail;
+  visible.value = true;
+  setTimeout(() => {
+    visible.value = false;
+    localStorage.removeItem('toast');
+  }, 3000);
+});
+
 onMounted(() => {
-  window.addEventListener('toast', (e) => {
-    toast.value = e.detail
-    visible.value = true
+  const savedToast = localStorage.getItem('toast');
+  if (savedToast) {
+    toast.value = JSON.parse(savedToast);
+    visible.value = true;
     setTimeout(() => {
-      visible.value = false
-    },3000)
-  })
-})
+      visible.value = false;
+      localStorage.removeItem('toast');
+    }, 3000);
+  }
+});
+
 </script>
