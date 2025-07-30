@@ -55,7 +55,7 @@ const mainNavItems: NavItem[] = [
             href: '/store/stocks',
           },
           {
-            title: 'Stock Lists',
+            title: 'Movement Logs',
             href: '/store/stock-lists',
           },
         ],

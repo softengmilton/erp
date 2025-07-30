@@ -18,7 +18,6 @@ class TypeController extends Controller
     public function index()
     {
         $expenseTypes = StoreExpenseType::orderByDesc('id')->paginate(10);
-        // $expenseTypes = StoreExpenseType::latest()->get();
         return Inertia::render('store/expense/type/Index', [
             'expenseTypes' => $expenseTypes
         ]);
@@ -38,13 +37,12 @@ class TypeController extends Controller
      */
     public function store(Request $request)
     {
-        // dd($request->all());
-        try{
+        try {
             $request->validate([
                 'name' => 'required|string|max:255|unique:store_expense_types',
                 'description' => 'nullable|string|max:255'
             ]);
-            $exepenseType = StoreExpenseType::create([
+            StoreExpenseType::create([
                 'name' => $request->name,
                 'slug' => Str::slug($request->name),
                 'description' => $request->description,
@@ -84,12 +82,11 @@ class TypeController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        // dd($request->all());
-        try{
+        try {
             $expenseType = StoreExpenseType::findOrFail($id);
 
             $request->validate([
-                'name' => 'required|string|max:255|unique:store_expense_types,name,' .$id,
+                'name' => 'required|string|max:255|unique:store_expense_types,name,' . $id,
                 'description' => 'nullable|string|max:255',
             ]);
 
@@ -103,7 +100,6 @@ class TypeController extends Controller
                 'type' => 'success',
                 'message' => 'Expense Type updated successfully',
             ]);
-
         } catch (Exception $e) {
             return Redirect::back()->with('toast', [
                 'type' => 'error',
@@ -117,12 +113,10 @@ class TypeController extends Controller
      */
     public function destroy(string $id)
     {
-        // dd($id)->all();
-
-        try{
+        try {
             $expenseType = StoreExpenseType::findOrFail($id);
 
-            if($expenseType->storeExpenses()->exists()) {
+            if ($expenseType->storeExpenses()->exists()) {
                 return Redirect::back()->with('toast', [
                     'type' => 'warning',
                     'message' => 'Cannot delete expense type because it is associated with expenses',

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Store\Order;
 
 use App\Http\Controllers\Controller;
+use App\Models\StoreOrder;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -35,9 +37,11 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(StoreOrder $order)
     {
-        //
+        return Inertia::render('store/order/Show', [
+            'order' => $order
+        ]);
     }
 
     /**

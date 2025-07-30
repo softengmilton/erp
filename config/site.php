@@ -12,5 +12,6 @@ return [
         'other',
         'store_product_image',
         'store_expense_file',
+        'store_stock_document',
     ],
 ];

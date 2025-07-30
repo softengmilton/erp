@@ -16,7 +16,7 @@ class StoreProductTypeFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->word();
+        $name = ucfirst($this->faker->words(2, true)) . ' ' . substr($this->faker->uuid, 0, 8);
         return [
             'name' => $name,
             'slug' => str()->slug($name),

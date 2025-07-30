@@ -2,16 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Models\StoreStock;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class StoreProductSeeder extends Seeder
+class StoreStockSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        \App\Models\StoreProduct::factory(500)->create();
+        StoreStock::factory()->count(500)->create();
     }
 }

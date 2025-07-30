@@ -23,15 +23,11 @@ class ExpenseController extends Controller
     public function index()
     {
         $expenses = StoreExpense::with('storeExpenseType')->paginate(10);
-        // $expenses = StoreExpense::all();
-        // dd($expenses);
-        // $expenses = StoreExpenseType::all();
         $expenseTypes = StoreExpenseType::orderByDesc('id')->get();
-        // $expenseTypes = StoreExpenseType::all();
 
         return Inertia::render('store/expense/expense/Index', [
             'expenses' => $expenses,
-            'expenseTypes' => $expenseTypes, 
+            'expenseTypes' => $expenseTypes,
         ]);
     }
 
@@ -46,12 +42,10 @@ class ExpenseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request){
-        // dd($request->all(), $request->file('attachment'), Auth::id());
-
+    public function store(Request $request)
+    {
         $incurredBy = Auth::id();
-
-        try{
+        try {
             $request->validate([
                 'name' => 'required|string|max:255|unique:store_expenses',
                 'description' => 'nullable|string',
@@ -69,10 +63,9 @@ class ExpenseController extends Controller
                 'incurred_by' => $incurredBy,
             ]);
 
-            if($request->hasFile('attachment')){
+            if ($request->hasFile('attachment')) {
                 $attachment = $this->storeFile($request->file('attachment'), 'store_expense_file');
                 $expense->primaryImage()->create([...$attachment, 'media_role' => 'store_expense_file']);
-
             }
             $expense->save();
             DB::commit();
@@ -80,7 +73,6 @@ class ExpenseController extends Controller
                 'type' => 'success',
                 'message' => 'Expense created successfully'
             ]);
-
         } catch (Exception $e) {
             DB::rollback();
             dd($e);
@@ -94,10 +86,7 @@ class ExpenseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
-    {
-        
-    }
+    public function show(string $id) {}
 
     /**
      * Show the form for editing the specified resource.
@@ -112,12 +101,10 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        // dd($request->all());
         $incurredBy = Auth::id();
-
         $expense = StoreExpense::findOrFail($id);
 
-        try{
+        try {
             $request->validate([
                 'name' => 'required|string|max:255|unique:store_expenses',
                 'description' => 'nullable|string',
@@ -136,12 +123,12 @@ class ExpenseController extends Controller
 
             ]);
 
-            if($request->hasFile('attachment')){
+            if ($request->hasFile('attachment')) {
                 $expense->primaryImage()->delete();
                 $attachment = $this->storeFile($request->file('attachment'), 'store_expense_file');
                 $expense->primaryImage()->create([...$attachment, 'media_role' => 'store_expense_file']);
-            }else {
-                $product->primaryImage()->delete();
+            } else {
+                $expense->primaryImage()->delete();
             }
             $expense->update();
             DB::commit();
@@ -150,8 +137,7 @@ class ExpenseController extends Controller
                 'type' => 'success',
                 'message' => 'Expense updated successfully',
             ]);
-           
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             return Redirect::back()->with('toast', [
                 'type' => 'error',
@@ -165,8 +151,7 @@ class ExpenseController extends Controller
      */
     public function destroy(string $id)
     {
-        // dd($id);
-        try{
+        try {
             $expense = StoreExpense::findOrFail($id);
             $expense->primaryImage()->delete();
             $expense->delete();

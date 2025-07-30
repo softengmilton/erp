@@ -9,13 +9,13 @@ class StoreExpenseFactory extends Factory
 {
     public function definition(): array
     {
-        $name = $this->faker->unique()->words(2, true); // "Travel Expense"
+        $name = $this->faker->unique()->words(2, true);
         $slug = Str::slug($name);
         $amount = $this->faker->numberBetween(100, 10000);
 
         return [
-            'store_expense_type_id' => rand(1, 5), // assumes types with IDs 1–5 exist
-            'name' => $name,                      // ✅ add name field
+            'store_expense_type_id' => rand(1, 5),
+            'name' => $name,
             'slug' => $slug,
             'description' => $this->faker->sentence(),
             'amount' => $amount,

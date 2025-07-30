@@ -2,9 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
 class StoreStockItem extends Model
 {
-    //
+    /*----------------------------------------
+     * Relationships
+     ----------------------------------------*/
+    public function storeStock()
+    {
+        return $this->belongsTo(StoreStock::class);
+    }
+
+    public function storeProduct()
+    {
+        return $this->belongsTo(StoreProduct::class);
+    }
 }
