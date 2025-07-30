@@ -104,14 +104,14 @@ function addProduct(product) {
     id: product.id,
     name: product.name,
     quantity: 1,
-    unit_cost: product.cost_price || 0,
+    unit_cost:  0,
     shipping_cost_per_unit: 0,
     other_fees_per_unit: 0,
-    unit_landed_cost: product.cost_price || 0,
+    unit_landed_cost: 0,
     shipping_cost: 0,
     other_fees: 0,
-    total_cost: product.cost_price || 0,
-    sale_price: product.sale_price || 0,
+    total_cost:  0,
+    sale_price:  0,
   });
 
   searchQuery.value = "";
@@ -160,7 +160,10 @@ function removeImage() {
 
 function submitForm() {
   router.post("/store/stocks", form, {
-    onSuccess: () => alert('Stock added successfully!'),
+    onSuccess: () => {
+      searchQuery.value = "";
+      showProductDropdown.value = false;
+    },
     preserveScroll: true
   });
 }
@@ -602,7 +605,7 @@ function submitForm() {
       <div class="flex justify-end pt-6 animate-on-load">
         <button
           @click="submitForm"
-          :disabled="form.processing || form.products.length === 0"
+
           class="px-6 py-2 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
           style="
             background-color: #0984e3;

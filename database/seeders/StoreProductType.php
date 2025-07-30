@@ -12,6 +12,6 @@ class StoreProductType extends Seeder
      */
     public function run(): void
     {
-        \App\Models\StoreProductType::factory(30)->create();
+        \App\Models\StoreProductType::factory(500)->create();
     }
 }
