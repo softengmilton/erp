@@ -138,8 +138,28 @@ class StockController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($stock)
     {
+        $stock = StoreStock::query()
+            ->with([
+                'storeStockItems.storeProduct',
+                'storeStockItems.storeProduct.primaryImage',
+                'storeStockMovements'
+            ])
+            ->where('invoice_number', $stock)
+            ->firstOrFail();
+        $stock->loadCount([
+            'storeStockItems as total_quantity' => fn($query) =>
+            $query->select(DB::raw('COALESCE(SUM(quantity), 0)'))
+        ]);
+        $stock->loadCount([
+            'storeStockMovements as total_movements' => fn($query) =>
+            $query->where('source_type', 'sale')
+                ->select(DB::raw('COALESCE(SUM(change_quantity), 0)'))
+        ]);
+
+
+
 
         return Inertia::render('store/stock/stock/Show');
     }

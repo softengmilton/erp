@@ -61,7 +61,7 @@ onMounted(() => {
       <div v-if="item.children" class="flex flex-col">
         <button
           @click="toggleMenu(item.title)"
-          class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-100 rounded"
+          class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-100 rounded dark:hover:text-gray-900"
         >
           <div class="flex items-center gap-2">
             <component :is="item.icon" class="w-4 h-4" />
@@ -77,7 +77,7 @@ onMounted(() => {
             <div v-if="child.subchildren">
               <button
                 @click="toggleMenu(child.title)"
-                class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-50 rounded"
+                class="flex items-center justify-between w-full px-3 py-2 hover:bg-gray-50 rounded dark:hover:text-gray-900"
               >
                 <div class="flex items-center gap-2">
                   <component :is="child.icon" class="w-4 h-4" />
@@ -95,7 +95,7 @@ onMounted(() => {
                 <li v-for="sub in child.subchildren" :key="sub.title">
                   <Link
                     :href="sub.href"
-                    class="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded text-sm"
+                    class="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded text-sm dark:hover:text-gray-900"
                   >
                     <span>{{ sub.title }}</span>
                   </Link>
@@ -105,7 +105,7 @@ onMounted(() => {
             <div v-else>
               <Link
                 :href="child.href"
-                class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded text-sm  dark:hover:text-gray-900"
               >
                 <component :is="child.icon" class="w-4 h-4" />
                 <span>{{ child.title }}</span>
@@ -117,7 +117,7 @@ onMounted(() => {
       <div v-else>
         <Link
           :href="item.href"
-          class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded"
+          class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded  dark:hover:text-gray-900"
         >
           <component :is="item.icon" class="w-4 h-4" />
           <span>{{ item.title }}</span>
