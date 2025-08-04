@@ -19,29 +19,30 @@ class StockController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index()
     {
         $stocks = StoreStock::query()
             ->with([
                 'storeStockItems.storeProduct',
-                'storeStockMovements'
+                'storeStockMovements',
             ])
             ->withCount([
                 'storeStockItems as total_quantity' => fn($query) =>
-                $query->select(DB::raw('COALESCE(SUM(quantity), 0)'))
-            ])
-            ->withCount([
+                $query->select(DB::raw('COALESCE(SUM(quantity), 0)')),
+
                 'storeStockMovements as total_movements' => fn($query) =>
-                $query->where('source_type', 'sale')
-                    ->select(DB::raw('COALESCE(SUM(change_quantity), 0)'))
+                $query->whereRaw("LOWER(source_type) = 'sale'")
+                    ->select(DB::raw('COALESCE(SUM(change_quantity), 0)')),
             ])
-            ->orderBy('id', 'desc')
+            ->orderByDesc('id')
             ->paginate(10);
 
         return Inertia::render('store/stock/stock/Index', [
             'stocks' => $stocks,
         ]);
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -141,51 +142,67 @@ class StockController extends Controller
      */
     public function show($stock)
     {
-        $stock = StoreStock::query()
-            ->with([
-                'storeStockItems',
-                'storeStockItems.storeProduct',
-                'storeStockItems.storeProduct.primaryImage',
-                'storeStockMovements'
-            ])
+        $stock = StoreStock::with([
+            'storeStockItems.storeProduct.primaryImage',
+            'storeStockMovements'
+        ])
             ->where('invoice_number', $stock)
             ->firstOrFail();
 
-        $stock->loadCount([
-            'storeStockMovements as total_movements' => fn($query) =>
-            $query->where('source_type', 'sale')
-                ->select(DB::raw('COALESCE(SUM(change_quantity), 0)'))
-        ]);
-        $stock->loadCount([
-            'storeStockItems as total_sale' => fn($query) =>
-            $query->where('sale_price', '>', 0)
-                ->select(DB::raw('COALESCE(SUM(sale_price * quantity), 0)'))
-        ]);
+        // Get product IDs
+        $productIds = $stock->storeStockItems->pluck('store_product_id');
 
-        // Calculate dynamic values for the frontend
-        $inStock = 0;
-        $lowStock = 0;
-        $outOfStock = 0;
+        // Get sold quantities from movements
+        $soldQuantities = DB::table('store_stock_movements')
+            ->where('store_stock_id', $stock->id)
+            ->whereRaw("LOWER(source_type) = 'sale'")
+            ->whereIn('store_product_id', $productIds)
+            ->select('store_product_id', DB::raw('SUM(change_quantity) as quantity_sold'))
+            ->groupBy('store_product_id')
+            ->pluck('quantity_sold', 'store_product_id');
 
+        // Initialize stock stats
+        $stockLevels = [
+            'inStock' => 0,
+            'lowStock' => 0,
+            'outOfStock' => 0,
+        ];
+
+        // Attach sold quantity and calculate stock level status
         foreach ($stock->storeStockItems as $item) {
-            if ($item->quantity <= 0) {
-                $outOfStock++;
-            } elseif ($item->quantity <= $item->storeProduct->low_stock_alert) {
-                $lowStock++;
+            $product = $item->storeProduct;
+            $item->quantity_sold = (int) ($soldQuantities[$product->id] ?? 0);
+
+            if ($item->quantity <= $item->quantity_sold) {
+                $stockLevels['outOfStock']++;
+            } elseif ($item->quantity <= $product->low_stock_alert && $item->quantity > $item->quantity_sold) {
+                $stockLevels['lowStock']++;
+                $stockLevels['inStock']++;
             } else {
-                $inStock++;
+                $stockLevels['inStock']++;
             }
         }
+
+        // Load movement and sales totals
+        $stock->loadCount([
+            'storeStockMovements as total_movements' => fn($query) =>
+            $query->whereRaw("LOWER(source_type) = 'sale'")
+                ->select(DB::raw('COALESCE(SUM(change_quantity), 0)')),
+            'storeStockItems as total_sale' => fn($query) =>
+            $query->where('sale_price', '>', 0)
+                ->select(DB::raw('COALESCE(SUM(sale_price * quantity), 0)')),
+        ]);
+
         return Inertia::render('store/stock/stock/Show', [
             'stock' => $stock,
             'stats' => [
                 'totalProducts' => $stock->storeStockItems->count(),
-                'inStock' => $inStock,
-                'lowStock' => $lowStock,
-                'outOfStock' => $outOfStock,
-            ]
+                ...$stockLevels,
+            ],
         ]);
     }
+
+
 
     /**
      * Show the form for editing the specified resource.

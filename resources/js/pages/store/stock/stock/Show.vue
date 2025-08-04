@@ -89,7 +89,7 @@ const submitAdjustment = () => {
             <div>
               <div class="uppercase text-sm font-semibold">Invoice Number</div>
               <div class="text-lg sm:text-xl font-semibold">
-                #{{ stats.invoiceNumber }}
+                #{{ stock.invoice_number }}
               </div>
             </div>
           </div>
@@ -390,7 +390,6 @@ const submitAdjustment = () => {
                   </div>
                 </div>
               </td>
-
               <td class="px-4 py-3 whitespace-nowrap">
                 {{ formatCurrency(item.unit_cost) ?? "N/A" }}
               </td>
@@ -410,7 +409,7 @@ const submitAdjustment = () => {
                 {{ formatCurrency(item.sale_price) ?? "N/A" }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap">{{ item.quantity ?? 0 }}</td>
-              <td class="px-4 py-3 whitespace-nowrap">{{ item.sold_quantity ?? 0 }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">{{ item.quantity_sold ?? 0 }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
                 {{ item.price_meta || "No changes" }}
               </td>

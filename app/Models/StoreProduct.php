@@ -33,7 +33,7 @@ class StoreProduct extends Model
     }
     public function storeStockMovements()
     {
-        return $this->hasMany(StoreStockMovement::class);
+        return $this->hasMany(StoreStockMovement::class, 'store_product_id', 'id');
     }
 
     /*----------------------------------------

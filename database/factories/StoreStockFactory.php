@@ -39,11 +39,11 @@ class StoreStockFactory extends Factory
 
             // Optional: create stock movements
             foreach ($items as $item) {
-                \App\Models\StoreStockMovement::factory()->create([
+                \App\Models\StoreStockMovement::create([
                     'store_stock_id' => $stock->id,
                     'store_product_id' => $item->store_product_id,
                     'change_quantity' => $item->quantity,
-                    'source_type' => 'purchase',
+                    'source_type' => $this->faker->randomElement(['purchase', 'sale', 'return']),
                     'source_data' => json_encode(['invoice' => $stock->invoice_number]),
                 ]);
             }

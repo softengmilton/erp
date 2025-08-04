@@ -4,6 +4,15 @@ namespace App\Models;
 
 class StoreStock extends Model
 {
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'source_data' => 'array',
+        // Add any other fields that need casting
+    ];
     protected $with = ['primaryImage'];
     protected $appends = ['primary_image_url'];
     /*----------------------------------------

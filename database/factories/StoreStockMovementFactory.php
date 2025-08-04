@@ -15,7 +15,7 @@ class StoreStockMovementFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition(): array
+    public function definition()
     {
         return [
             'store_product_id' => StoreProduct::factory(), // Assumes factory exists
