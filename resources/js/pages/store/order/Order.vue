@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3'
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -129,15 +130,16 @@ const breadcrumbs: BreadcrumbItem[] = [
               >
                 <a
                   href="javascript:void(0)"
-                  class="w-full rounded-lg border cursor border-red-200 px-3 py-2 text-center text-sm font-medium  lg:w-auto"
+                  class="w-full rounded-lg border cursor border-red-200 px-3 py-2 text-center text-sm font-medium lg:w-auto"
                 >
                   Cancel order
                 </a>
-                <a
-                  href="/store/order-details"
-                  class="w-full inline-flex justify-center rounded-lg border px-3 py-2 text-sm font-medium  lg:w-auto"
-                  >View details</a
+                <Link
+                  :href="`/store/order/1`"
+                  class="w-full inline-flex justify-center rounded-lg border px-3 py-2 text-sm font-medium lg:w-auto"
                 >
+                  View details
+                </Link>
               </td>
             </tr>
 
