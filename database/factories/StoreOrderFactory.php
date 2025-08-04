@@ -2,18 +2,18 @@
 
 namespace Database\Factories;
 
+use App\Models\StoreOrder;
+use App\Models\StoreOrderItem;
+use App\Models\StoreStockMovement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\StoreOrder>
+ * @extends Factory<\App\Models\StoreOrder>
  */
 class StoreOrderFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = StoreOrder::class;
+
     public function definition(): array
     {
         $paymentStatus = $this->faker->randomElement(['paid', 'due']);
@@ -37,5 +37,38 @@ class StoreOrderFactory extends Factory
             'adjustment' => $this->faker->randomFloat(2, -10, 10),
             'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
         ];
+    }
+
+    public function configure()
+    {
+        return $this->afterCreating(function (StoreOrder $order) {
+            $faker = \Faker\Factory::create();
+
+            // Create and save StoreOrderItems
+            $items = StoreOrderItem::factory()
+                ->count($faker->numberBetween(1, 5))
+                ->make([
+                    'store_order_id' => $order->id,
+                ]);
+
+            $order->storeOrderItems()->saveMany($items);
+
+            // Create and save StoreStockMovements for each item
+            foreach ($items as $item) {
+                $movements = StoreStockMovement::factory()
+                    ->count($faker->numberBetween(1, 3))
+                    ->make([
+                        'store_stock_id' => $item->store_stock_id,
+                        'store_product_id' => $item->store_product_id,
+                        'change_quantity' => $item->quantity,
+                        'source_data' => $order->id,
+                        'source_type' => 'sale',
+                    ]);
+
+                foreach ($movements as $movement) {
+                    $movement->save();
+                }
+            }
+        });
     }
 }

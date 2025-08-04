@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Stock\StoreStockRequest;
 use App\Models\StoreProduct;
 use App\Models\StoreStock;
+use App\Models\StoreStockItem;
 use App\Traits\MediaMan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -160,6 +161,7 @@ class StockController extends Controller
             $query->where('sale_price', '>', 0)
                 ->select(DB::raw('COALESCE(SUM(sale_price * quantity), 0)'))
         ]);
+
         // Calculate dynamic values for the frontend
         $inStock = 0;
         $lowStock = 0;
@@ -207,5 +209,41 @@ class StockController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function updateStockProductPrice(Request $request, $stock, $product)
+    {
+        $validated = $request->validate([
+            'sale_price' => 'required|numeric|min:0',
+            'note' => 'nullable|string|max:255',
+        ]);
+        $stockItem = StoreStockItem::query()
+            ->where('store_stock_id', $stock)
+            ->where('store_product_id', $product)
+            ->firstOrFail();
+
+        $oldPrice = $stockItem->sale_price;
+
+        // Count how many items were sold at the old price
+        $quantitySold = DB::table('store_order_items')
+            ->where('store_stock_id', $stock)
+            ->where('store_product_id', $product)
+            ->where('sale_price', $oldPrice)
+            ->sum('quantity');
+
+        $priceChangeSummary = $quantitySold > 0
+            ? "{$oldPrice}*{$quantitySold}x"
+            : "No items sold at old price.";
+
+        // Update to new sale price
+        $stockItem->update([
+            'sale_price' => $validated['sale_price'],
+        ]);
+
+        return Redirect::back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Product price updated successfully.',
+            'summary' => $priceChangeSummary,
+        ]);
     }
 }

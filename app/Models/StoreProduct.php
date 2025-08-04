@@ -27,7 +27,14 @@ class StoreProduct extends Model
         return $this->belongsTo(StoreProductType::class);
     }
 
-
+    public function storeStockItems()
+    {
+        return $this->hasMany(StoreStockItem::class);
+    }
+    public function storeStockMovements()
+    {
+        return $this->hasMany(StoreStockMovement::class);
+    }
 
     /*----------------------------------------
     * Accessors

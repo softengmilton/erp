@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head,router } from "@inertiajs/vue3";
 import { ref } from "vue";
 import { formatCurrency, formatDate } from "@/utils/helper.js";
 
@@ -14,6 +14,7 @@ const props = defineProps({
     required: true,
   },
 });
+console.log("Stock Details Page Loaded", props.stock, props.stats);
 
 // Modal states
 const showPriceModal = ref(false);
@@ -54,8 +55,10 @@ const openAdjustmentModal = (item) => {
 
 // Submit handlers
 const submitPriceUpdate = () => {
-  console.log("Updating price for:", selectedItem.value.id, priceForm.value);
-  // TODO: Add your API call here
+   router.post(`/store/stocks/${props.stock.id}/update-price/${selectedItem.value.id}`, {
+       sale_price: priceForm.value.sale_price,
+       note: priceForm.value.note,
+  });
   showPriceModal.value = false;
 };
 
@@ -407,7 +410,7 @@ const submitAdjustment = () => {
                 {{ formatCurrency(item.sale_price) ?? "N/A" }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap">{{ item.quantity ?? 0 }}</td>
-              <td class="px-4 py-3 whitespace-nowrap">{{ item.total_movements ?? 0 }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">{{ item.sold_quantity ?? 0 }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
                 {{ item.price_meta || "No changes" }}
               </td>

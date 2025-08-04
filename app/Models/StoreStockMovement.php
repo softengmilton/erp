@@ -16,4 +16,8 @@ class StoreStockMovement extends Model
     {
         return $this->belongsTo(StoreProduct::class);
     }
+    public function storeStockItem()
+    {
+        return $this->belongsTo(StoreStockItem::class);
+    }
 }
