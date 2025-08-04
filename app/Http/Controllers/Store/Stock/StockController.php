@@ -138,10 +138,51 @@ class StockController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($stock)
     {
+        $stock = StoreStock::query()
+            ->with([
+                'storeStockItems',
+                'storeStockItems.storeProduct',
+                'storeStockItems.storeProduct.primaryImage',
+                'storeStockMovements'
+            ])
+            ->where('invoice_number', $stock)
+            ->firstOrFail();
 
-        return Inertia::render('store/stock/stock/Show');
+        $stock->loadCount([
+            'storeStockMovements as total_movements' => fn($query) =>
+            $query->where('source_type', 'sale')
+                ->select(DB::raw('COALESCE(SUM(change_quantity), 0)'))
+        ]);
+        $stock->loadCount([
+            'storeStockItems as total_sale' => fn($query) =>
+            $query->where('sale_price', '>', 0)
+                ->select(DB::raw('COALESCE(SUM(sale_price * quantity), 0)'))
+        ]);
+        // Calculate dynamic values for the frontend
+        $inStock = 0;
+        $lowStock = 0;
+        $outOfStock = 0;
+
+        foreach ($stock->storeStockItems as $item) {
+            if ($item->quantity <= 0) {
+                $outOfStock++;
+            } elseif ($item->quantity <= $item->storeProduct->low_stock_alert) {
+                $lowStock++;
+            } else {
+                $inStock++;
+            }
+        }
+        return Inertia::render('store/stock/stock/Show', [
+            'stock' => $stock,
+            'stats' => [
+                'totalProducts' => $stock->storeStockItems->count(),
+                'inStock' => $inStock,
+                'lowStock' => $lowStock,
+                'outOfStock' => $outOfStock,
+            ]
+        ]);
     }
 
     /**

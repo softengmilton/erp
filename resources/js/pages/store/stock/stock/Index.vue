@@ -70,27 +70,27 @@ const breadcrumbs = [
       </div>
 
       <!-- Stocks Table -->
-      <div class="overflow-x-auto border rounded-lg border-gray-200 bg-white">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div class="overflow-x-auto border rounded-lg">
+        <table class="min-w-full divide-y">
+          <thead>
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Invoice #</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Supplier</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Total Cost</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Total Units</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Sold Units</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Invoice #</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Supplier</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Total Cost</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Total Units</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Sold Units</th>
+              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="divide-y">
             <tr
               v-for="stock in filteredStocks"
               :key="stock.id"
-              class="hover:bg-gray-50 transition"
+              class="hover:bg-gray-50 hover:dark:bg-gray-900 transition"
             >
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <div class="flex items-center gap-3">
-                <Link :href="`/store/stocks/${stock.id}`" class="flex items-center gap-3">
+                <Link :href="`/store/stocks/${stock.invoice_number}`" class="flex items-center gap-3">
                 <img
                     :src="stock.image_path || '/assets/default/default_invoice.png'"
                     alt="Invoice Image"
@@ -100,18 +100,16 @@ const breadcrumbs = [
                 </Link>
             </div>
             </td>
-
-
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
                 {{ stock.supplier_name || '-' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
                 ${{ stock.total_cost.toFixed(2) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
                 {{ stock.total_quantity }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
                 {{ stock.total_movements }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
@@ -144,7 +142,7 @@ const breadcrumbs = [
           :key="link.label"
           :disabled="!link.url"
           @click.prevent="goToPage(link.url)"
-          class="px-4 py-2 border rounded-md text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50
+          class="px-4 py-2 border rounded-md text-sm font-medium
                  disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition"
           :class="{ 'bg-blue-50 border-blue-500 text-blue-600': link.active }"
           v-html="link.label"

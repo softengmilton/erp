@@ -3,6 +3,14 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
 import { ref, computed, watch, onMounted } from "vue";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import Card from "@/components/ui/card/Card.vue";
+import CardTitle from "@/components/ui/card/CardTitle.vue";
+import CardHeader from "@/components/ui/card/CardHeader.vue";
+import CardContent from "@/components/ui/card/CardContent.vue";
+import CardFooter from "@/components/ui/card/CardFooter.vue";
+import Label from "@/components/ui/label/Label.vue";
+import Input from "@/components/ui/input/Input.vue";
+import InputError from "@/components/InputError.vue";
 
 // Props
 const props = defineProps({
@@ -172,12 +180,12 @@ function submitForm() {
 <template>
   <Head title="Add Stock" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+    <div class="p-8 rounded-lg shadow-sm dark:border dark:border-gray-700">
       <!-- Header Section -->
       <div class="flex items-center justify-between mb-6 pb-4 border-b">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">Add New Stock</h1>
-          <p class="text-gray-600 mt-1">
+          <h1 class="text-3xl font-bold">Add New Stock</h1>
+          <p class="mt-1">
             Fill in the details of your new stock inventory
           </p>
         </div>
@@ -192,420 +200,398 @@ function submitForm() {
       <!-- Form Sections -->
       <div class="space-y-8">
         <!-- Basic Information Section -->
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-          <div class="flex items-center mb-6">
+        <Card>
+          <CardHeader class="flex items-center">
             <div class="w-1 h-6 bg-blue-500 mr-3 rounded-full"></div>
-            <h2 class="text-lg font-semibold text-gray-800">Basic Information</h2>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardTitle class="text-lg font-semibold">Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Invoice Number -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Invoice Number*</label
-              >
-              <input
+              <Label for="invoice_number">Invoice Number*</Label>
+              <Input
+                id="invoice_number"
                 v-model="form.invoice_number"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-500 filter blur-[0.4px]"
                 readonly
                 disabled
               />
+              <InputError :message="form.errors.invoice_number" />
             </div>
 
+            <!-- Supplier Name -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Supplier Name</label
-              >
-              <input
+              <Label for="supplier_name">Supplier Name</Label>
+              <Input
+                id="supplier_name"
                 v-model="form.supplier_name"
-                type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Supplier company name"
               />
-              <p v-if="form.errors.supplier_name" class="mt-1 text-sm text-red-600">
-                {{ form.errors.supplier_name }}
-              </p>
+              <InputError :message="form.errors.supplier_name" />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <!-- Products Section -->
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-          <div class="flex items-center justify-between mb-6">
+        <Card>
+          <CardHeader class="flex items-center justify-between">
             <div class="flex items-center">
               <div class="w-1 h-6 bg-blue-500 mr-3 rounded-full"></div>
-              <h2 class="text-lg font-semibold text-gray-800">Products</h2>
+              <CardTitle class="text-lg font-semibold">Products</CardTitle>
             </div>
-            <span class="text-sm text-gray-500">{{ form.products.length }} items</span>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Add Products</label
-            >
-            <div class="relative">
-              <input
-                v-model="searchQuery"
-                @focus="handleSearchFocus"
-                @input="showProductDropdown = searchQuery.length > 0"
-                type="text"
-                placeholder="Search products by name..."
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              />
-              <ul
-                v-if="showProductDropdown && filteredProducts.length"
-                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
-              >
-                <li
-                  v-for="product in filteredProducts"
-                  :key="product.id"
-                  @mousedown.prevent="addProduct(product)"
-                  class="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm flex items-center border-b border-gray-100 last:border-0"
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ form.products.length }} items</span>
+          </CardHeader>
+          <CardContent>
+            <div class="mb-6">
+              <Label>Add Products</Label>
+              <div class="relative">
+                <Input
+                  v-model="searchQuery"
+                  @focus="handleSearchFocus"
+                  @input="showProductDropdown = searchQuery.length > 0"
+                  type="text"
+                  placeholder="Search products by name..."
+                />
+                <ul
+                  v-if="showProductDropdown && filteredProducts.length"
+                  class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
-                  <span class="text-gray-400 mr-2">•</span>
-                  {{ product.name }}
-                  <span class="ml-auto text-gray-500"
-                    >${{ product.cost_price?.toFixed(2) || "0.00" }}</span
+                  <li
+                    v-for="product in filteredProducts"
+                    :key="product.id"
+                    @mousedown.prevent="addProduct(product)"
+                    class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer text-sm flex items-center border-b border-gray-100 dark:border-gray-600 last:border-0"
                   >
-                </li>
-              </ul>
-            </div>
-            <p v-if="form.errors.products" class="mt-1 text-sm text-red-600">
-              {{ form.errors.products }}
-            </p>
-          </div>
-
-          <!-- Product Table -->
-          <div class="overflow-x-auto border border-gray-200 rounded-lg">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Product
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Quantity
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Unit Cost
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Shipping/Unit
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Fees/Unit
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Landed Cost
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Total
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Sale Price
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr
-                  v-for="(item, index) in form.products"
-                  :key="item.id"
-                  class="hover:bg-gray-50"
-                >
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                  >
-                    {{ item.name }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <input
-                      v-model.number="item.quantity"
-                      @change="updateProductTotal(index)"
-                      type="number"
-                      min="1"
-                      class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <input
-                      v-model.number="item.unit_cost"
-                      @change="distributeAdditionalCosts"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${{ item.shipping_cost_per_unit.toFixed(2) }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${{ item.other_fees_per_unit.toFixed(2) }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    ${{ item.unit_landed_cost.toFixed(2) }}
-                  </td>
-                  <td
-                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium"
-                  >
-                    ${{ item.total_cost.toFixed(2) }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <input
-                      v-model.number="item.sale_price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      @click="removeProduct(index)"
-                      class="text-red-600 hover:text-red-800"
+                    <span class="text-gray-400 mr-2">•</span>
+                    <span class="dark:text-gray-200">{{ product.name }}</span>
+                    <span class="ml-auto text-gray-500 dark:text-gray-400"
+                      >${{ product.cost_price?.toFixed(2) || "0.00" }}</span
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  </li>
+                </ul>
+              </div>
+              <InputError :message="form.errors.products" />
+            </div>
 
-          <div
-            v-if="form.products.length === 0"
-            class="text-center py-8 border border-gray-200 rounded-lg mt-4"
-          >
-            <svg
-              class="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <!-- Product Table -->
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="min-w-full divide-y ">
+                <thead >
+                  <tr>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Product
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Quantity
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Unit Cost
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Shipping/Unit
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    >
+                      Fees/Unit
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Landed Cost
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Total
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                    >
+                      Sale Price
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    >
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <tr
+                    v-for="(item, index) in form.products"
+                    :key="item.id"
+                  >
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                    >
+                      {{ item.name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <Input
+                        v-model.number="item.quantity"
+                        @change="updateProductTotal(index)"
+                        type="number"
+                        min="1"
+                        class="w-20"
+                      />
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <Input
+                        v-model.number="item.unit_cost"
+                        @change="distributeAdditionalCosts"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="w-24"
+                      />
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ">
+                      ${{ item.shipping_cost_per_unit.toFixed(2) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      ${{ item.other_fees_per_unit.toFixed(2) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
+                      ${{ item.unit_landed_cost.toFixed(2) }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                    >
+                      ${{ item.total_cost.toFixed(2) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <Input
+                        v-model.number="item.sale_price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="w-24"
+                      />
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <button
+                        @click="removeProduct(index)"
+                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              v-if="form.products.length === 0"
+              class="text-center py-8 border  rounded-lg mt-4"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-              />
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No products added</h3>
-            <p class="mt-1 text-sm text-gray-500">
-              Search and select products above to add them to this stock entry.
-            </p>
-          </div>
-        </div>
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">No products added</h3>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Search and select products above to add them to this stock entry.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <!-- Costs Section -->
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-          <div class="flex items-center mb-6">
+        <Card>
+          <CardHeader class="flex items-center">
             <div class="w-1 h-6 bg-blue-500 mr-3 rounded-full"></div>
-            <h2 class="text-lg font-semibold text-gray-800">Costs & Summary</h2>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Subtotal</label>
-              <div
-                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-right font-medium text-gray-900"
-              >
-                ${{ subtotal.toFixed(2) }}
+            <CardTitle class="text-lg font-semibold">Costs & Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div>
+                <Label>Subtotal</Label>
+                <div
+                  class="w-full px-4 py-3 border rounded-md text-right font-medium  blur[0.4]"
+                >
+                  ${{ subtotal.toFixed(2) }}
+                </div>
+              </div>
+              <div>
+                <Label for="shipping_cost">Shipping Cost</Label>
+                <Input
+                  id="shipping_cost"
+                  v-model.number="form.shipping_cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+                <InputError :message="form.errors.shipping_cost" />
+              </div>
+              <div>
+                <Label for="other_fees">Other Fees</Label>
+                <Input
+                  id="other_fees"
+                  v-model.number="form.other_fees"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+                <InputError :message="form.errors.other_fees" />
               </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Shipping Cost</label
-              >
-              <input
-                v-model.number="form.shipping_cost"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-              />
-              <p v-if="form.errors.shipping_cost" class="mt-1 text-sm text-red-600">
-                {{ form.errors.shipping_cost }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1"
-                >Other Fees</label
-              >
-              <input
-                v-model.number="form.other_fees"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-              />
-              <p v-if="form.errors.other_fees" class="mt-1 text-sm text-red-600">
-                {{ form.errors.other_fees }}
-              </p>
-            </div>
-          </div>
 
-          <!-- Grand Total Section -->
-          <div class="flex justify-end">
-            <div class="w-full md:w-1/2 lg:w-1/3">
-              <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                <div class="space-y-3">
-                  <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Subtotal:</span>
-                    <span class="text-sm font-medium">${{ subtotal.toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Shipping:</span>
-                    <span class="text-sm font-medium"
-                      >${{ parseFloat(form.shipping_cost || 0).toFixed(2) }}</span
-                    >
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Other Fees:</span>
-                    <span class="text-sm font-medium"
-                      >${{ parseFloat(form.other_fees || 0).toFixed(2) }}</span
-                    >
-                  </div>
-                  <div class="border-t border-gray-200 pt-3 mt-2">
+            <!-- Grand Total Section -->
+            <div class="flex justify-end">
+              <div class="w-full md:w-1/2 lg:w-1/3">
+                <div class=" p-6 rounded-lg border ">
+                  <div class="space-y-3">
                     <div class="flex justify-between">
-                      <span class="text-base font-semibold">Grand Total:</span>
-                      <span class="text-base font-bold text-blue-600"
-                        >${{ grandTotal.toFixed(2) }}</span
+                      <span class="text-sm">Subtotal:</span>
+                      <span class="text-sm font-medium ">${{ subtotal.toFixed(2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm ">Shipping:</span>
+                      <span class="text-sm font-medium "
+                        >${{ parseFloat(form.shipping_cost || 0).toFixed(2) }}</span
                       >
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-sm">Other Fees:</span>
+                      <span class="text-sm font-medium"
+                        >${{ parseFloat(form.other_fees || 0).toFixed(2) }}</span
+                      >
+                    </div>
+                    <div class="border-t pt-3 mt-2">
+                      <div class="flex justify-between">
+                        <span class="text-base font-semibold">Grand Total:</span>
+                        <span class="text-base font-bold text-blue-600 dark:text-blue-400"
+                          >${{ grandTotal.toFixed(2) }}</span
+                        >
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <!-- Notes and Document Section -->
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-          <div class="flex items-center mb-6">
+        <Card>
+          <CardHeader class="flex items-center">
             <div class="w-1 h-6 bg-blue-500 mr-3 rounded-full"></div>
-            <h2 class="text-lg font-semibold text-gray-800">Additional Information</h2>
-          </div>
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-            <ckeditor
-              :editor="editor"
-              v-model="form.note"
-              :config="{
-                toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList'],
-              }"
-              class="rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <p v-if="form.errors.note" class="mt-1 text-sm text-red-600">
-              {{ form.errors.note }}
-            </p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Attach Document</label
-            >
-            <div
-              class="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center"
-            >
-              <div v-if="imagePreview" class="space-y-4">
-                <img
-                  :src="imagePreview"
-                  alt="Document preview"
-                  class="w-full h-48 object-contain mx-auto rounded-md"
-                />
-                <button
-                  @click="removeImage"
-                  type="button"
-                  class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Remove Document
-                </button>
-              </div>
-              <div v-else class="space-y-3">
-                <svg
-                  class="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-                <p class="text-sm text-gray-600">
-                  Upload supporting documents (PDF, JPG, PNG)
-                </p>
-                <label class="cursor-pointer">
-                  <span class="sr-only">Choose document</span>
-                  <input
-                    type="file"
-                    @change="handleImageUpload"
-                    accept="image/*,.pdf"
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                </label>
-              </div>
+            <CardTitle class="text-lg font-semibold">Additional Information</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-6">
+            <div>
+              <Label>Notes</Label>
+              <ckeditor
+                :editor="editor"
+                v-model="form.note"
+                :config="{
+                  toolbar: ['bold', 'italic', 'link', 'bulletedList', 'numberedList'],
+                }"
+                class="rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-200"
+              />
+              <InputError :message="form.errors.note" />
             </div>
-            <p v-if="form.errors.document" class="mt-1 text-sm text-red-600">
-              {{ form.errors.document }}
-            </p>
-          </div>
-        </div>
+
+            <div>
+              <Label>Attach Document</Label>
+              <div
+                class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center"
+              >
+                <div v-if="imagePreview" class="space-y-4">
+                  <img
+                    :src="imagePreview"
+                    alt="Document preview"
+                    class="w-full h-48 object-contain mx-auto rounded-md"
+                  />
+                  <button
+                    @click="removeImage"
+                    type="button"
+                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Remove Document
+                  </button>
+                </div>
+                <div v-else class="space-y-3">
+                  <svg
+                    class="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Upload supporting documents (PDF, JPG, PNG)
+                  </p>
+                  <label class="cursor-pointer">
+                    <span class="sr-only">Choose document</span>
+                    <input
+                      type="file"
+                      @change="handleImageUpload"
+                      accept="image/*,.pdf"
+                      class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-600 dark:file:text-gray-200 dark:hover:file:bg-gray-500"
+                    />
+                  </label>
+                </div>
+              </div>
+              <InputError :message="form.errors.document" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <!-- Submit Button -->
-      <div class="flex justify-end pt-6 animate-on-load">
+      <CardFooter class="flex justify-end pt-6 animate-on-load">
         <button
           @click="submitForm"
-
           class="px-6 py-2 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
           style="
             background-color: #0984e3;
@@ -636,7 +622,7 @@ function submitForm() {
             Submit Stock
           </span>
         </button>
-      </div>
+      </CardFooter>
     </div>
   </AppLayout>
 </template>

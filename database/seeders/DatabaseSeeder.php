@@ -21,12 +21,14 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            CustomerSeeder::class,
             StoreProductType::class,
             StoreProductSeeder::class,
             StoreSettingSeeder::class,
-            // StoreStockSeeder::class,
+            StoreStockSeeder::class,
             StoreExpenseTypeSeeder::class,
             StoreExpenseSeeder::class,
+            StoreOrderSeeder::class,
         ]);
     }
 }

@@ -28,7 +28,7 @@ class StoreStockItemFactory extends Factory
             'total_cost' => $totalCost,
             'sale_price' => $unitCost * 1.5,
             'adjustment_data' => null,
-            'note' => $this->faker->sentence,
+            // 'note' => $this->faker->sentence,
         ];
     }
 }

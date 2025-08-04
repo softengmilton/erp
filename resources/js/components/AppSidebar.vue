@@ -27,7 +27,7 @@ const mainNavItems: NavItem[] = [
             href: '/store/orders',
           },
           {
-            title: 'Pos',
+            title: 'POS',
             href: '/store/pos',
           },
         ],

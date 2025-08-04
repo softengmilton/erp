@@ -2,9 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
 class StoreOrder extends Model
 {
-    //
+    public function storeOrderItems()
+    {
+        return $this->hasMany(StoreOrderItem::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
 }
