@@ -1,8 +1,8 @@
 <script setup>
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3'
+import AppLayout from "@/layouts/AppLayout.vue";
+import { Head, router } from "@inertiajs/vue3";
+import { ref, computed } from "vue";
+import { Link } from "@inertiajs/vue3";
 
 const props = defineProps({
   stocks: {
@@ -11,7 +11,7 @@ const props = defineProps({
   },
 });
 
-const searchQuery = ref('');
+const searchQuery = ref("");
 const isDeleting = ref(false);
 const selectedStock = ref(null);
 
@@ -26,24 +26,29 @@ const closeDeleteConfirm = () => {
 };
 
 const deleteStock = () => {
-  // Placeholder: integrate delete logic (e.g., Inertia.delete)
-  console.log('Deleting stock:', selectedStock.value);
-  closeDeleteConfirm();
+  router.delete(`/store/stocks/${selectedStock.value.id}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      closeDeleteConfirm();
+    },
+    onError: (error) => {
+      console.error("Failed to delete stock:", error);
+    },
+  });
 };
+
 
 const goToPage = (url) => {
   if (url) window.location.href = url;
 };
 
 const filteredStocks = computed(() => {
-  return props.stocks.data.filter((stock) =>  // Fixed: use props.stocks instead of stocks
-    stock.invoice_number.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  return props.stocks.data.filter((
+    stock // Fixed: use props.stocks instead of stocks
+  ) => stock.invoice_number.toLowerCase().includes(searchQuery.value.toLowerCase()));
 });
 
-const breadcrumbs = [
-  { title: 'Stocks', href: '/store/stocks' },
-];
+const breadcrumbs = [{ title: "Stocks", href: "/store/stocks" }];
 </script>
 
 <template>
@@ -52,18 +57,18 @@ const breadcrumbs = [
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6">
       <!-- Top Bar -->
-      <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div
+        class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search by Invoice Number..."
-          class="sm:w-64 px-4 py-2 border rounded-md bg-white text-gray-900 placeholder-gray-500
-                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+          class="sm:w-64 px-4 py-2 border rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
         />
         <Link
-            href="/store/stocks/create"
-          class="inline-flex items-center justify-center px-5 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-sm
-                 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+          href="/store/stocks/create"
+          class="inline-flex items-center justify-center px-5 py-2 bg-gray-700 text-white font-semibold rounded-md shadow-sm hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
         >
           + Add Stock
         </Link>
@@ -74,12 +79,36 @@ const breadcrumbs = [
         <table class="min-w-full divide-y">
           <thead>
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Invoice #</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Supplier</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Total Cost</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Total Units</th>
-              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Sold Units</th>
-              <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Actions</th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              >
+                Invoice #
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              >
+                Supplier
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              >
+                Total Cost
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              >
+                Total Units
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              >
+                Sold Units
+              </th>
+              <th
+                class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y">
@@ -88,20 +117,23 @@ const breadcrumbs = [
               :key="stock.id"
               class="hover:bg-gray-50 hover:dark:bg-gray-900 transition"
             >
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <div class="flex items-center gap-3">
-                <Link :href="`/store/stocks/${stock.invoice_number}`" class="flex items-center gap-3">
-                <img
-                    :src="stock.image_path || '/assets/default/default_invoice.png'"
-                    alt="Invoice Image"
-                    class="h-10 w-10 rounded object-cover"
-                />
-                <span>{{ stock.invoice_number }}</span>
-                </Link>
-            </div>
-            </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex items-center gap-3">
+                  <Link
+                    :href="`/store/stocks/${stock.invoice_number}`"
+                    class="flex items-center gap-3"
+                  >
+                    <img
+                      :src="stock.image_path || '/assets/default/default_invoice.png'"
+                      alt="Invoice Image"
+                      class="h-10 w-10 rounded object-cover"
+                    />
+                    <span>{{ stock.invoice_number }}</span>
+                  </Link>
+                </div>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                {{ stock.supplier_name || '-' }}
+                {{ stock.supplier_name || "-" }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 ${{ stock.total_cost.toFixed(2) }}
@@ -112,12 +144,9 @@ const breadcrumbs = [
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 {{ stock.total_movements }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                <button
-                  class="text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-                >
-                  Edit
-                </button>
+              <td
+                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3"
+              >
                 <button
                   @click="openDeleteConfirm(stock)"
                   class="text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
@@ -142,8 +171,7 @@ const breadcrumbs = [
           :key="link.label"
           :disabled="!link.url"
           @click.prevent="goToPage(link.url)"
-          class="px-4 py-2 border rounded-md text-sm font-medium
-                 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition"
+          class="px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition"
           :class="{ 'bg-blue-50 border-blue-500 text-blue-600': link.active }"
           v-html="link.label"
         ></button>
@@ -157,32 +185,28 @@ const breadcrumbs = [
         aria-modal="true"
       >
         <!-- Glass overlay -->
-        <div
-          class="fixed inset-0 backdrop-blur-sm"
-          @click="closeDeleteConfirm"
-        ></div>
+        <div class="fixed inset-0 backdrop-blur-sm" @click="closeDeleteConfirm"></div>
 
         <!-- Modal content -->
-        <div class="relative bg-white/90 backdrop-blur-md rounded-lg p-6 w-full max-w-sm shadow-xl border border-white/20">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            Confirm Delete
-          </h3>
+        <div
+          class="relative bg-white/90 backdrop-blur-md rounded-lg p-6 w-full max-w-sm shadow-xl border border-white/20"
+        >
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Delete</h3>
           <p class="mb-6 text-gray-700">
             Are you sure you want to delete stock
-            <strong class="text-gray-900">{{ selectedStock?.invoice_number }}</strong>?
+            <strong class="text-gray-900">{{ selectedStock?.invoice_number }}</strong
+            >?
           </p>
           <div class="flex justify-end space-x-3">
             <button
               @click="closeDeleteConfirm"
-              class="px-4 py-2 rounded-md border text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+              class="px-4 py-2 rounded-md border text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
             >
               Cancel
             </button>
             <button
               @click="deleteStock"
-              class="px-5 py-2 rounded-md text-sm font-medium shadow-sm bg-red-600 text-white hover:bg-red-700
-                     focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
+              class="px-5 py-2 rounded-md text-sm font-medium shadow-sm bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
             >
               Delete
             </button>

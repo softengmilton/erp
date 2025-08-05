@@ -43,6 +43,7 @@ const openPriceModal = (item) => {
   showPriceModal.value = true;
 };
 
+console.log("Selected Item for Price Update:", selectedItem.value);
 const openAdjustmentModal = (item) => {
   selectedItem.value = item;
   adjustmentForm.value = {
@@ -55,7 +56,7 @@ const openAdjustmentModal = (item) => {
 
 // Submit handlers
 const submitPriceUpdate = () => {
-   router.post(`/store/stocks/${props.stock.id}/update-price/${selectedItem.value.id}`, {
+   router.post(`/store/stocks/${props.stock.id}/update-price/${selectedItem.value.store_product_id}`, {
        sale_price: priceForm.value.sale_price,
        note: priceForm.value.note,
   });

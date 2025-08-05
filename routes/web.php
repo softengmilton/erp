@@ -29,5 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Static routes
         Route::post('stocks/{stock}/update-price/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'updateStockProductPrice'])->name('stocks.update-price');
+        // stock adjustment
+        Route::post('stocks/{stock}/adjustment/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'adjustStockProduct'])->name('stocks.adjustment');
     });
 });

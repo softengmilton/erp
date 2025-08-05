@@ -8,6 +8,7 @@ use App\Models\StoreProduct;
 use App\Models\StoreStock;
 use App\Models\StoreStockItem;
 use App\Traits\MediaMan;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -223,44 +224,105 @@ class StockController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy($stock)
     {
-        //
+        try {
+            $stock = StoreStock::findOrFail($stock);
+            $stock->delete();
+
+            return Redirect::route('store.stocks.index')->with('toast', [
+                'type' => 'success',
+                'message' => 'Stock deleted successfully.',
+            ]);
+        } catch (Exception $e) {
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Failed to delete stock: ' . $e->getMessage(),
+            ]);
+        }
     }
+    /**
+     * Update the sale price of a product in stock.
+     */
+
 
     public function updateStockProductPrice(Request $request, $stock, $product)
     {
-        $validated = $request->validate([
-            'sale_price' => 'required|numeric|min:0',
-            'note' => 'nullable|string|max:255',
-        ]);
-        $stockItem = StoreStockItem::query()
-            ->where('store_stock_id', $stock)
-            ->where('store_product_id', $product)
-            ->firstOrFail();
+        try {
+            // dd($request->all(), $stock, $product);
+            // $validated = $request->validate([
+            //     'sale_price' => 'required|numeric|min:0',
+            //     'note' => 'nullable|string|max:255',
+            // ]);
 
-        $oldPrice = $stockItem->sale_price;
+            // $stockItem = StoreStockItem::query()
+            //     ->where([
+            //         'store_stock_id' => $stock,
+            //         'store_product_id' => $product,
+            //     ])->first();
 
-        // Count how many items were sold at the old price
-        $quantitySold = DB::table('store_order_items')
-            ->where('store_stock_id', $stock)
-            ->where('store_product_id', $product)
-            ->where('sale_price', $oldPrice)
-            ->sum('quantity');
+            // dd($stockItem);
+            dd($request->all(), $stock, $product);
+            $stockItem = StoreStockItem::query()
+                ->where('store_stock_id', $stock)
+                ->where('store_product_id', $product)
+                ->first();
+            dd($stockItem);
 
-        $priceChangeSummary = $quantitySold > 0
-            ? "{$oldPrice}*{$quantitySold}x"
-            : "No items sold at old price.";
 
-        // Update to new sale price
-        $stockItem->update([
-            'sale_price' => $validated['sale_price'],
-        ]);
 
-        return Redirect::back()->with('toast', [
-            'type' => 'success',
-            'message' => 'Product price updated successfully.',
-            'summary' => $priceChangeSummary,
-        ]);
+            if (!$stockItem) {
+                return Redirect::back()->with('toast', [
+                    'type' => 'error',
+                    'message' => 'Stock item not found.',
+                ]);
+            }
+
+            $oldPrice = $stockItem->sale_price;
+
+            // Count how many items were sold at the old price
+            $quantitySold = DB::table('store_order_items')
+                ->where('store_stock_id', $stock)
+                ->where('store_product_id', $product)
+                ->where('sale_price', $oldPrice)
+                ->sum('quantity');
+
+            $priceChangeSummary = $quantitySold > 0
+                ? "{$oldPrice}*{$quantitySold}x"
+                : "No items sold at old price.";
+
+            // Update to new sale price
+            $stockItem->update([
+                'sale_price' => $validated['sale_price'],
+                'adjustment_data' => json_encode([
+                    'old_price' => $oldPrice,
+                    'new_price' => $validated['sale_price'],
+                    'quantity_sold' => $quantitySold,
+                    'changed_at' => now(),
+                ]),
+            ]);
+
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Product price updated successfully.',
+                'summary' => $priceChangeSummary,
+            ]);
+        } catch (Exception $e) {
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Failed to update product price: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Adjust stock product quantity.
+     */
+    public function adjustStockProduct(Request $request, $stock, $product)
+    {
+        try {
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
     }
 }
