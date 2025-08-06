@@ -13,5 +13,6 @@ return [
         'store_product_image',
         'store_expense_file',
         'store_stock_document',
+        'store_product_type_image',
     ],
 ];

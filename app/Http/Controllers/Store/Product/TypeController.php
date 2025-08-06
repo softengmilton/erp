@@ -7,17 +7,19 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use App\Models\StoreProductType;
+use App\Traits\MediaMan;
 use Exception;
 use Illuminate\Support\Facades\Redirect;
 
 class TypeController extends Controller
 {
+    use MediaMan;
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $productTypes = StoreProductType::orderByDesc('id')->paginate(10);
+        $productTypes = StoreProductType::with('primaryImage')->orderByDesc('id')->paginate(10);
         return Inertia::render('store/product/type/Index', [
             'productTypes' => $productTypes
         ]);
@@ -46,6 +48,12 @@ class TypeController extends Controller
                 'slug' => Str::slug($request->name),
                 'description' => $request->description,
             ]);
+            if ($request->hasFile('image')) {
+                $image = $this->storeFile($request->file('image'), 'store_product_type_image');
+                $productType->primaryImage()->create([...$image, 'media_role' => 'store_product_type_image']);
+            }
+            $productType->save();
+
             return Redirect::back()->with('toast', [
                 'type' => 'success',
                 'message' => 'Product Type created successfully',
@@ -92,6 +100,14 @@ class TypeController extends Controller
                 'slug' => Str::slug($request->name),
                 'description' => $request->description,
             ]);
+            if ($request->hasFile('image')) {
+                $productType->primaryImage()->delete();
+                $image = $this->storeFile($request->file('image'), 'store_product_type_image');
+                $productType->primaryImage()->create([...$image, 'media_role' => 'store_product_type_image']);
+            } else {
+                $productType->primaryImage()->delete();
+            }
+            $productType->update();
             return Redirect::back()->with('toast', [
                 'type' => 'success',
                 'message' => 'Product Type updated successfully',
@@ -118,6 +134,7 @@ class TypeController extends Controller
                 ]);
             }
             $productType->delete();
+            $productType->primaryImage()->delete();
             return Redirect::back()->with('toast', [
                 'type' => 'success',
                 'message' => 'Product Type deleted successfully',
