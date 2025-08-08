@@ -18,18 +18,25 @@ require __DIR__ . '/auth.php';
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::name('store.')->prefix('store')->group(function () {
-        // Resource routes
+
+        // Product management routes
         Route::resource('products', \App\Http\Controllers\Store\Product\ProductController::class);
         Route::resource('product-types', \App\Http\Controllers\Store\Product\TypeController::class);
+
+        // Stock management routes
         Route::resource('stocks', \App\Http\Controllers\Store\Stock\StockController::class);
+        Route::post('stocks/{stock}/update-price/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'updateStockProductPrice'])->name('stocks.update-price');
+        Route::post('stocks/{stock}/adjustment/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'adjustStockProduct'])->name('stocks.adjustment');
+
+        // Expense management routes
         Route::resource('expenses', \App\Http\Controllers\Store\Expense\ExpenseController::class);
         Route::resource('expense-types', \App\Http\Controllers\Store\Expense\TypeController::class);
-        Route::resource('orders', \App\Http\Controllers\Store\Order\OrderController::class);
-        Route::resource('pos', \App\Http\Controllers\Store\Order\PosController::class)->only(['index', 'store']);
 
-        // Static routes
-        Route::post('stocks/{stock}/update-price/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'updateStockProductPrice'])->name('stocks.update-price');
-        // stock adjustment
-        Route::post('stocks/{stock}/adjustment/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'adjustStockProduct'])->name('stocks.adjustment');
+        // Order management routes
+        Route::resource('orders', \App\Http\Controllers\Store\Order\OrderController::class);
+
+        // POS routes
+        Route::resource('pos', \App\Http\Controllers\Store\Order\PosController::class)->only(['index', 'store']);
+        // I want to pass stock number as a query parameter to the POS index route
     });
 });
