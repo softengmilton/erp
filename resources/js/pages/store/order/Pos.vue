@@ -1,86 +1,74 @@
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Head, router } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
 import { formatCurrency } from "@/utils/helper";
-import { computed, watch } from "vue";
-import { router } from "@inertiajs/vue3";
-const props = defineProps({
-  stock: {
-    type: Object,
-    required: true,
-  },
-  productTypes: {
-    type: Array,
-    required: true,
-  },
-  stockNumbers: {
-    type: Array,
-    required: true,
-  },
-});
-// console.log(props);
 
-// State for dropdowns and actions
+// ======================
+// 1. Props
+// ======================
+const props = defineProps({
+  stock: { type: Object, required: true },
+  productTypes: { type: Array, required: true },
+  stockNumbers: { type: Array, required: true },
+  customers: { type: Array, required: true },
+});
+
+// ======================
+// 2. State
+// ======================
 const showDiscountDropdown = ref(false);
 const showAdjustmentDropdown = ref(false);
+const showPaymentDropdown = ref(false);
 const discountPercentage = ref(0);
 const adjustmentAmount = ref(0);
+const paidAmount = ref(0);
+
 const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
 const showStockDropdown = ref(false);
-// const selectedStock = ref("INV-2023-0001");
+
 const searchProductQuery = ref("");
+const selectedStock = ref(props.stock?.stock_number || props.stockNumbers[0]);
+const selectedCategory = ref(null);
+const cartItems = ref([]);
+// Loading state
+const isSubmitting = ref(false);
+// Payment methods
+const paymentMethods = [
+  { id: "cash", name: "Cash", icon: "💵" },
+  { id: "bkash", name: "bKash", icon: "📱" },
+  { id: "nagad", name: "Nagad", icon: "📲" },
+];
+const selectedPaymentMethod = ref("cash");
+
+// ======================
+// 3. Computed Properties
+// ======================
 const stockOptions = computed(() => [...props.stockNumbers]);
 
-// State changes:
-const selectedStock = ref(props.stock?.stock_number || props.stockNumbers[0]);
-
-// Watch for stock selection changes
-watch(selectedStock, (newStockNumber) => {
-  router.get(
-    "pos",
-    { stock_number: newStockNumber },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      only: ["stock"], // Only reload the stock data
-    }
-  );
-});
-
-const selectedCategory = ref(null);
 const filteredProducts = computed(() => {
-  let items = props.stock.store_stock_items;
+  let items = props.stock.store_stock_items || [];
 
+  // Filter by category if one is selected
   if (selectedCategory.value) {
-    items = items.filter(
-      (item) => item.store_product.store_product_type_id === selectedCategory.value
-    );
+    items = items.filter((item) => {
+      return (
+        String(item.store_product?.store_product_type_id) ===
+        String(selectedCategory.value)
+      );
+    });
   }
 
+  // Filter by search query
   if (searchProductQuery.value.trim()) {
     const query = searchProductQuery.value.toLowerCase();
-    items = items.filter((item) => item.store_product.name.toLowerCase().includes(query));
+    items = items.filter((item) =>
+      item.store_product?.name?.toLowerCase().includes(query)
+    );
   }
 
   return items;
 });
-
-const cartItems = ref([]);
-
-function addToCart(item) {
-  const existing = cartItems.value.find((i) => i.id === item.id);
-  if (existing) {
-    existing.quantity += 1;
-  } else {
-    cartItems.value.push({
-      id: item.id,
-      product: item.store_product,
-      price: item.sale_price,
-      quantity: 1,
-    });
-  }
-}
 
 const cartNetTotal = computed(() =>
   cartItems.value.reduce((sum, i) => sum + i.price * i.quantity, 0)
@@ -90,13 +78,97 @@ const cartDiscount = computed(
   () => (cartNetTotal.value * discountPercentage.value) / 100
 );
 
-
+const cartAdjustment = computed(() => adjustmentAmount.value);
 
 const cartTotal = computed(
-  () => cartNetTotal.value - cartDiscount.value - adjustmentAmount.value
+  () => cartNetTotal.value - cartDiscount.value + adjustmentAmount.value
 );
 
-const cartAdjustment = computed(() => adjustmentAmount.value);
+const dueAmount = computed(() => {
+  return Math.max(0, cartTotal.value - paidAmount.value);
+});
+
+// ======================
+// 4. Watchers
+// ======================
+watch(selectedStock, (newStockNumber) => {
+  router.get(
+    "pos",
+    { stock_number: newStockNumber },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      only: ["stock"],
+    }
+  );
+});
+
+// Auto-set paid amount to total when payment method changes
+watch(selectedPaymentMethod, () => {
+  paidAmount.value = cartTotal.value;
+});
+
+// ======================
+// 5. Methods
+// ======================
+// In your methods section, update these functions:
+
+function addToCart(item) {
+  if (item.current_quantity <= 0) {
+    alert("This product is out of stock!");
+    return;
+  }
+
+  const existing = cartItems.value.find((i) => i.id === item.id);
+
+  if (existing) {
+    // Check against current stock in the store
+    const productInStock = props.stock.store_stock_items.find((p) => p.id === item.id);
+    if (existing.quantity < productInStock.current_quantity) {
+      existing.quantity += 1;
+    } else {
+      alert(`Only ${productInStock.current_quantity} items available in stock!`);
+    }
+  } else {
+    cartItems.value.push({
+      stock_number: selectedStock.value,
+      id: item.id,
+      product: item.store_product,
+      price: item.sale_price,
+      quantity: 1,
+      maxStock: item.current_quantity, // Store max available quantity
+    });
+    console.log("Added to cart:", cartItems.value);
+  }
+}
+
+function removeFromCart(itemId) {
+  cartItems.value = cartItems.value.filter((item) => item.id !== itemId);
+}
+
+function increaseQuantity(itemId) {
+  const item = cartItems.value.find((item) => item.id === itemId);
+  if (item) {
+    // Find current stock status
+    const productInStock = props.stock.store_stock_items.find((p) => p.id === itemId);
+    if (productInStock && item.quantity < productInStock.current_quantity) {
+      item.quantity += 1;
+    } else {
+      alert(`Only ${productInStock.current_quantity} items available in stock!`);
+    }
+  }
+}
+
+function decreaseQuantity(itemId) {
+  const item = cartItems.value.find((item) => item.id === itemId);
+  if (item) {
+    if (item.quantity > 1) {
+      item.quantity -= 1;
+    } else {
+      removeFromCart(itemId);
+    }
+  }
+}
 
 function applyDiscount() {
   showDiscountDropdown.value = false;
@@ -106,14 +178,49 @@ function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
 
+function submitOrder() {
+  if (cartItems.value.length === 0) return;
 
+  isSubmitting.value = true;
 
-const breadcrumbs = [
-  {
-    title: "POS",
-    href: "/pos",
-  },
-];
+  const orderData = {
+    items: cartItems.value.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+    })),
+    payment_method: selectedPaymentMethod.value,
+    total: cartTotal.value,
+    paid: paidAmount.value,
+    due: dueAmount.value,
+    discount: cartDiscount.value,
+    adjustment: adjustmentAmount.value,
+    stock_number: selectedStock.value,
+  };
+
+  router.post("pos", orderData, {
+      preserveScroll: true,
+        onSuccess: () => {
+            cartItems.value = [];
+            discountPercentage.value = 0;
+            adjustmentAmount.value = 0;
+            paidAmount.value = 0;
+            selectedPaymentMethod.value = "cash";
+            showPaymentDropdown.value = false;
+      },
+        onError: (errors) => {
+            console.error("Order submission failed:", errors);
+            alert("Failed to submit order. Please try again.");
+        },
+    onFinish: () => {
+      isSubmitting.value = false;
+    },
+  });
+}
+
+// ======================
+// 6. Constants
+// ======================
+const breadcrumbs = [{ title: "POS", href: "/pos" }];
 </script>
 
 <template>
@@ -147,6 +254,7 @@ const breadcrumbs = [
         <!-- Clear All -->
         <a
           href="#"
+          @click.prevent="cartItems = []"
           class="inline-flex items-center border rounded px-4 py-2 hover:bg-white shadow text-sm text-red-500 bg-white hover:bg-gray-50"
         >
           <svg
@@ -192,9 +300,9 @@ const breadcrumbs = [
             placeholder="Search products..."
           />
         </div>
+
         <!-- Stock Select Dropdown -->
         <div class="relative">
-          <!-- Dropdown button -->
           <button
             id="stockDropdownButton"
             @click="showStockDropdown = !showStockDropdown"
@@ -295,10 +403,15 @@ const breadcrumbs = [
             </ul>
           </div>
         </div>
+
         <!-- Discount Button with Dropdown -->
         <div class="relative">
           <button
-            @click="showDiscountDropdown = !showDiscountDropdown"
+            @click="
+              showDiscountDropdown = !showDiscountDropdown;
+              showAdjustmentDropdown = false;
+              showPaymentDropdown = false;
+            "
             class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
           >
             <svg
@@ -318,7 +431,7 @@ const breadcrumbs = [
           </button>
           <div
             v-if="showDiscountDropdown"
-            class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1"
+            class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1 border"
           >
             <div class="px-4 py-2">
               <label class="block text-sm text-gray-700 mb-1">Discount Percentage</label>
@@ -334,7 +447,7 @@ const breadcrumbs = [
                 @click="applyDiscount"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Close
+                Apply
               </button>
             </div>
           </div>
@@ -343,7 +456,11 @@ const breadcrumbs = [
         <!-- Adjustment Button with Dropdown -->
         <div class="relative">
           <button
-            @click="showAdjustmentDropdown = !showAdjustmentDropdown"
+            @click="
+              showAdjustmentDropdown = !showAdjustmentDropdown;
+              showDiscountDropdown = false;
+              showPaymentDropdown = false;
+            "
             class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
           >
             <svg
@@ -363,7 +480,7 @@ const breadcrumbs = [
           </button>
           <div
             v-if="showAdjustmentDropdown"
-            class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1"
+            class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1 border"
           >
             <div class="px-4 py-2">
               <label class="block text-sm text-gray-700 mb-1">Adjustment Amount</label>
@@ -377,19 +494,26 @@ const breadcrumbs = [
                 @click="applyAdjustment"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Close
+                Apply
               </button>
             </div>
           </div>
         </div>
-        <div>
+
+        <!-- Submit Order Button with Payment Options -->
+        <div class="relative">
           <button
-            @click="showAdjustmentDropdown = !showAdjustmentDropdown"
-            class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
+            @click="
+              showPaymentDropdown = !showPaymentDropdown;
+              showDiscountDropdown = false;
+              showAdjustmentDropdown = false;
+            "
+            class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-teal-600 text-white hover:bg-teal-700"
+            :disabled="cartItems.length === 0"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 mr-2 text-blue-600"
+              class="h-5 w-5 mr-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -397,11 +521,97 @@ const breadcrumbs = [
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
               />
             </svg>
-            Submit Order
+            Submit Order ({{
+              paymentMethods.find((p) => p.id === selectedPaymentMethod).name
+            }})
           </button>
+
+          <!-- Payment Method Dropdown -->
+          <div
+            v-if="showPaymentDropdown"
+            class="absolute z-10 mt-1 right-0 w-72 bg-white rounded-md shadow-lg border"
+          >
+            <div class="px-4 py-3 border-b">
+              <h3 class="text-base font-semibold">Payment Details</h3>
+            </div>
+            <div class="px-4 py-3 space-y-4">
+              <div>
+                <h4 class="text-sm font-medium mb-2">Payment Method</h4>
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    v-for="method in paymentMethods"
+                    :key="method.id"
+                    @click="selectedPaymentMethod = method.id"
+                    class="border rounded-md px-3 py-2 text-sm flex flex-col items-center"
+                    :class="{
+                      'border-teal-500 bg-teal-50': selectedPaymentMethod === method.id,
+                    }"
+                  >
+                    <span class="text-lg mb-1">{{ method.icon }}</span>
+                    <span>{{ method.name }}</span>
+                  </button>
+                </div>
+              </div>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm font-medium mb-1">Total Amount</label>
+                  <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
+                    {{ formatCurrency(cartTotal) }}
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Paid Amount</label>
+                  <input
+                    v-model.number="paidAmount"
+                    type="number"
+                    min="0"
+                    :max="cartTotal"
+                    class="w-full border rounded-md px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Due Amount</label>
+                  <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
+                    {{ formatCurrency(dueAmount) }}
+                  </div>
+                </div>
+              </div>
+              <button
+                @click="submitOrder"
+                :disabled="cartItems.length === 0 || isSubmitting"
+                class="w-full bg-teal-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="!isSubmitting">Confirm Order</span>
+                <span v-else class="flex items-center justify-center">
+                  <svg
+                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Processing...
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -442,10 +652,14 @@ const breadcrumbs = [
             <div
               v-for="item in filteredProducts"
               :key="item.id"
-              @click="addToCart(item)"
-              class="relative rounded-lg border p-3 text-center hover:shadow-md dark:hover:shadow-md dark:shadow-blue-900 cursor-pointer"
+              @click="item.current_quantity > 0 ? addToCart(item) : null"
+              class="relative rounded-lg border p-3 text-center"
+              :class="{
+                'opacity-50 cursor-not-allowed': item.current_quantity <= 0,
+                'hover:shadow-md cursor-pointer': item.current_quantity > 0,
+              }"
             >
-              <!-- Quantity Badge -->
+              <!-- Stock Badge -->
               <div
                 class="absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold shadow-sm"
                 :class="{
@@ -463,7 +677,9 @@ const breadcrumbs = [
                 :src="item.store_product.primary_image_url"
                 alt="Product"
                 class="mb-2 mx-auto max-w-full h-20 object-cover rounded"
+                :class="{ grayscale: item.current_quantity <= 0 }"
               />
+
               <div class="font-medium text-sm">{{ item.store_product.name }}</div>
               <div class="text-teal-600 text-sm font-semibold">
                 {{ formatCurrency(item.sale_price) }}
@@ -478,8 +694,7 @@ const breadcrumbs = [
         >
           <!-- Customer Info -->
           <div class="flex justify-between text-sm text-teal-600 mb-4">
-            <a href="#" class="hover:underline">Walking Customers (Edit)</a>
-            <!-- <a href="#" class="hover:underline">Select Table</a> -->
+            <a href="#" class="hover:underline">Walking Customer (Edit)</a>
           </div>
 
           <!-- Cart Items -->
@@ -489,23 +704,49 @@ const breadcrumbs = [
               :key="item.id"
               class="flex items-center justify-between border-b pb-2 text-sm space-x-2"
             >
-              <!-- 🖼 Product Image -->
+              <!-- Product Image -->
               <img
                 :src="item.product.primary_image_url"
                 alt="Product Image"
                 class="w-10 h-10 object-cover rounded border"
               />
 
-              <!-- 📦 Name & Quantity -->
+              <!-- Name & Quantity Controls -->
               <div class="flex-1">
                 <div class="font-medium">{{ item.product.name }}</div>
-                <div class="text-xs text-gray-500">x{{ item.quantity }}</div>
+                <div class="flex items-center mt-1 space-x-2">
+                  <button
+                    @click.stop="decreaseQuantity(item.id)"
+                    class="w-6 h-6 flex items-center justify-center border rounded text-gray-600 hover:bg-gray-100 hover:text-teal-600 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span class="text-sm">{{ item.quantity }}</span>
+                  <button
+                    @click.stop="increaseQuantity(item.id)"
+                    class="w-6 h-6 flex items-center justify-center border rounded text-gray-600 hover:bg-gray-100 hover:text-teal-600 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
-              <!-- 💰 Total Price -->
-              <div class="font-semibold text-right">
-                {{ formatCurrency(item.price * item.quantity) }}
+              <!-- Price and Remove Button -->
+              <div class="flex flex-col items-end">
+                <div class="font-semibold">
+                  {{ formatCurrency(item.price * item.quantity) }}
+                </div>
+                <button
+                  @click.stop="removeFromCart(item.id)"
+                  class="mt-1 text-xs text-red-500 hover:text-red-700 hover:underline"
+                >
+                  Remove
+                </button>
               </div>
+            </div>
+
+            <div v-if="cartItems.length === 0" class="text-center py-4 text-gray-500">
+              No items in cart
             </div>
           </div>
 
@@ -529,9 +770,32 @@ const breadcrumbs = [
               <span>Total:</span>
               <span>{{ formatCurrency(cartTotal) }}</span>
             </div>
+
+            <!-- Payment Summary -->
+            <div class="mt-4 pt-4 border-t">
+              <div class="flex justify-between p-2 rounded bg-blue-50">
+                <span class="font-medium">Paid:</span>
+                <span>{{ formatCurrency(paidAmount) }}</span>
+              </div>
+              <div
+                class="flex justify-between p-2 rounded"
+                :class="{ 'bg-green-50': dueAmount === 0, 'bg-yellow-50': dueAmount > 0 }"
+              >
+                <span class="font-medium">Due:</span>
+                <span
+                  :class="{
+                    'text-green-600': dueAmount === 0,
+                    'text-yellow-600': dueAmount > 0,
+                  }"
+                >
+                  {{ formatCurrency(dueAmount) }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </AppLayout>
 </template>
+

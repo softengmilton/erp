@@ -4,6 +4,9 @@ namespace App\Models;
 
 class StoreOrder extends Model
 {
+    protected $casts = [
+        'source_data' => 'array',
+    ];
     public function storeOrderItems()
     {
         return $this->hasMany(StoreOrderItem::class);
