@@ -13,9 +13,52 @@ class OrderController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('store/order/Order');
+        $orders = StoreOrder::query()
+            ->with(['customer', 'storeOrderItems'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('order_number', 'like', "%{$search}%");
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('payment_status', $status);
+            })
+            ->when($request->payment_method, function ($query, $method) {
+                $query->where('payment_method', $method);
+            })
+            ->when($request->customer_type, function ($query, $type) {
+                $query->where('customer_type', $type);
+            })
+            ->when($request->date_range, function ($query, $range) {
+                switch ($range) {
+                    case 'today':
+                        $query->whereDate('created_at', today());
+                        break;
+                    case 'this_week':
+                        $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                        break;
+                    case 'this_month':
+                        $query->whereMonth('created_at', now()->month);
+                        break;
+                    case 'last_3_months':
+                        $query->where('created_at', '>=', now()->subMonths(3));
+                        break;
+                    case 'last_6_months':
+                        $query->where('created_at', '>=', now()->subMonths(6));
+                        break;
+                    case 'this_year':
+                        $query->whereYear('created_at', now()->year);
+                        break;
+                }
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('store/order/Order', [
+            'orders' => $orders,
+            'filters' => $request->only(['search', 'status', 'payment_method', 'customer_type', 'date_range']),
+        ]);
     }
 
     /**
@@ -39,8 +82,14 @@ class OrderController extends Controller
      */
     public function show(StoreOrder $order)
     {
+        $order->load([
+            'customer',
+            'storeOrderItems.storeProduct',
+            'storeOrderItems.storeStock'
+        ]);
+
         return Inertia::render('store/order/Show', [
-            'order' => $order
+            'order' => $order,
         ]);
     }
 

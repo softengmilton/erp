@@ -73,9 +73,9 @@ window.addEventListener("toast", (e) => {
   localStorage.setItem("toast", JSON.stringify(e.detail));
   toast.value = e.detail;
   visible.value = true;
-  //   setTimeout(() => {
-  //     closeToast();
-  //   }, 3000);
+     setTimeout(() => {
+      closeToast();
+    }, 3000);
 });
 
 onMounted(() => {
@@ -83,9 +83,9 @@ onMounted(() => {
   if (savedToast) {
     toast.value = JSON.parse(savedToast);
     visible.value = true;
-    // setTimeout(() => {
-    //   closeToast();
-    // }, 3000);
+     setTimeout(() => {
+      closeToast();
+    }, 3000);
   }
 });
 </script>
