@@ -104,6 +104,46 @@ const applyFilters = debounce(() => {
 
 watch([search, statusFilter, paymentMethodFilter, customerTypeFilter, dateRange], applyFilters);
 
+
+/// edit
+
+const isModalOpen = ref(false);
+const isEditing = ref(false);
+const paymentUpdate = ref({
+  id: null,
+  due_amount: "",
+});
+
+function openEditModal(order) {
+  paymentUpdate.value = { ...order };
+  isModalOpen.value = true;
+  isEditing.value = true;
+  console.log(paymentUpdate.value.id);
+  console.log(paymentUpdate.value.due_amount);
+};
+
+function closeModal() {
+  isModalOpen.value = false;
+}
+
+function updatePayment() {
+  if(isEditing.value) {
+    // console.log(paymentUpdate.value.id);
+    // console.log(paymentUpdate.value.due_amount);
+    
+    router.put(
+      `/store/orders/${paymentUpdate.value.id}`,
+      paymentUpdate.value,
+      {
+        onSuccess: () => closeModal(),
+      }
+    );
+  }
+}
+
+
+
+
 const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Orders', href: '/store/orders' },
@@ -218,6 +258,13 @@ const breadcrumbs = [
                   >
                     Cancel
                   </button>
+                         <button
+                  v-if="order.payment_status == 'due' || order.payment_status == 'partial'"
+                   @click = "openEditModal(order)"
+                    class="text-teal-600"
+                    >
+                    confirm payment
+                  </button>
                 </td>
               </tr>
             </template>
@@ -254,6 +301,55 @@ const breadcrumbs = [
           </Link>
         </div>
       </div>
+    </div>
+    <div>
+      <!-- Add Modal For Payment -->
+      <div
+        v-if="isModalOpen"
+        class="fixed inset-0 flex items-center justify-center z-50 p-4"
+        role="dialog"
+        aria-modal="true"
+      >
+        <!-- Glass overlay -->
+        <div class="fixed inset-0 backdrop-blur-sm"></div>
+
+        <!-- Modal content -->
+        <div
+          class="relative backdrop-blur-md rounded-lg p-6 w-full max-w-md shadow-xl border"
+        >
+          <h2 class="text-xl font-semibold mb-4">
+            Due payment
+          </h2>
+
+          <label class="block mb-4">
+            <span class="block text-sm font-medium mb-1">Amount</span>
+            <input
+              v-model="paymentUpdate.due_amount"
+              type="number"
+              placeholder="Enter amount"
+              required
+              class="mt-1 block w-full rounded-md shadow-sm  px-3 py-2 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            />
+          </label>
+
+          <div class="flex justify-end space-x-3">
+            <button
+            @click="closeModal"
+              class="px-4 py-2 rounded-md border text-sm font-medium  hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+            @click="updatePayment"
+              class="px-5 py-2 rounded-md text-sm font-medium shadow-sm bg-gray-800 text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+
     </div>
   </AppLayout>
 </template>
