@@ -117,6 +117,7 @@ class PosController extends Controller
             'discount' => 'required|numeric|min:0',
             'adjustment' => 'required|numeric',
             'stock_number' => 'required|exists:store_stocks,invoice_number',
+            'customer_id' => 'nullable|exists:customers,id',
         ]);
 
         DB::beginTransaction();
@@ -124,7 +125,8 @@ class PosController extends Controller
             // 1. Create the order
             $order = \App\Models\StoreOrder::create([
                 'order_number' => 'ORD-' . date('YmdHis'),
-                'customer_type' => 'walking',
+                'customer_type' => $validated['customer_id'] ? 'registered' : 'walking',
+                'customer_id' => $validated['customer_id'] ?? null,
                 'total_amount' => $validated['total'],
                 'paid_amount' => $validated['paid'],
                 'due_amount' => $validated['due'],
@@ -132,6 +134,7 @@ class PosController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'discount' => $validated['discount'],
                 'adjustment' => $validated['adjustment'],
+
             ]);
 
             // 2. Process each item

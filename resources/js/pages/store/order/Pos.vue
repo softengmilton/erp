@@ -195,22 +195,23 @@ function submitOrder() {
     discount: cartDiscount.value,
     adjustment: adjustmentAmount.value,
     stock_number: selectedStock.value,
+    customer_id: selectedCustomer.value ? selectedCustomer.value.id : null,
   };
 
   router.post("pos", orderData, {
-      preserveScroll: true,
-        onSuccess: () => {
-            cartItems.value = [];
-            discountPercentage.value = 0;
-            adjustmentAmount.value = 0;
-            paidAmount.value = 0;
-            selectedPaymentMethod.value = "cash";
-            showPaymentDropdown.value = false;
-      },
-        onError: (errors) => {
-            console.error("Order submission failed:", errors);
-            alert("Failed to submit order. Please try again.");
-        },
+    preserveScroll: true,
+    onSuccess: () => {
+      cartItems.value = [];
+      discountPercentage.value = 0;
+      adjustmentAmount.value = 0;
+      paidAmount.value = 0;
+      selectedPaymentMethod.value = "cash";
+      showPaymentDropdown.value = false;
+    },
+    onError: (errors) => {
+      console.error("Order submission failed:", errors);
+      alert("Failed to submit order. Please try again.");
+    },
     onFinish: () => {
       isSubmitting.value = false;
     },
@@ -218,7 +219,76 @@ function submitOrder() {
 }
 
 // ======================
-// 6. Constants
+// 6. Customer
+// ======================
+
+const customerModal = ref(false);
+const customerSearchQuery = ref("");
+const showCustomerForm = ref(false);
+const selectedCustomer = ref(null);
+const customers = ref([
+  { id: 0, name: "Walking Customer", phone: "", email: "", isWalking: true },
+  ...props.customers,
+]);
+
+const customer = ref({
+  name: "",
+  phone: "",
+  email: "",
+});
+
+function openCustomerModal() {
+  customerModal.value = true;
+  showCustomerForm.value = false;
+  customerSearchQuery.value = "";
+}
+
+function closeCustomerModal() {
+  customerModal.value = false;
+}
+
+function searchCustomer() {
+  // Filter customers based on search query
+  return customers.value.filter(
+    (c) =>
+      c.phone.includes(customerSearchQuery.value) ||
+      c.name.toLowerCase().includes(customerSearchQuery.value.toLowerCase())
+  );
+}
+
+function selectCustomer(customer) {
+  selectedCustomer.value = customer;
+  closeCustomerModal();
+}
+
+function showAddCustomerForm() {
+  showCustomerForm.value = true;
+  customer.value = { name: "", phone: "", email: "" };
+}
+
+function saveCustomer() {
+  const newCustomer = {
+    ...customer.value,
+    id: Math.max(...customers.value.map((c) => c.id)) + 1,
+    isWalking: false,
+  };
+  router.post("customers", newCustomer, {
+    preserveScroll: true,
+    onSuccess: () => {
+      customers.value.push(newCustomer);
+      selectCustomer(newCustomer);
+      showCustomerForm.value = false;
+      customer.value = { name: "", phone: "", email: "" };
+    },
+    onError: (errors) => {
+      console.error("Failed to save customer:", errors);
+      alert("Failed to save customer. Please try again.");
+    },
+  });
+  selectCustomer(newCustomer);
+}
+// ======================
+// 7. Constants
 // ======================
 const breadcrumbs = [{ title: "POS", href: "/pos" }];
 </script>
@@ -693,8 +763,152 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
           class="col-span-12 lg:col-span-3 flex flex-col border light:border-slate-200 rounded shadow-md p-4"
         >
           <!-- Customer Info -->
+          <!-- Customer Info -->
+          <!-- Customer Info -->
           <div class="flex justify-between text-sm text-teal-600 mb-4">
-            <a href="#" class="hover:underline">Walking Customer (Edit)</a>
+            <a href="#" class="hover:underline" @click="openCustomerModal">
+              {{ selectedCustomer ? selectedCustomer.name : customers[0].name }} (Edit)
+            </a>
+          </div>
+          <!--  customer modal -->
+          <!-- Customer modal -->
+          <div
+            v-if="customerModal"
+            class="fixed inset-0 flex items-start justify-center z-50 p-4 pt-20"
+            role="dialog"
+            aria-modal="true"
+          >
+            <!-- Glass overlay -->
+            <div class="fixed inset-0 backdrop-blur-sm" @click="closeCustomerModal"></div>
+
+            <!-- Modal content -->
+            <div
+              class="relative bg-white rounded-lg p-6 w-full max-w-xl shadow-xl border border-gray-200 overflow-y-auto max-h-[calc(100vh-10rem)]"
+            >
+              <h2 class="text-xl font-semibold mb-4 text-gray-900">
+                {{ showCustomerForm ? "Add Customer" : "Select Customer" }}
+              </h2>
+
+              <!-- Customer List View -->
+              <div v-if="!showCustomerForm">
+                <!-- Search section -->
+                <div class="mb-6">
+                  <h3 class="text-md font-medium mb-2 text-gray-700">
+                    Search customer by phone or name
+                  </h3>
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      v-model="customerSearchQuery"
+                      placeholder="Enter phone or name"
+                      class="flex-1 border rounded px-3 py-2 focus:ring-2 focus:ring-teal-500 border-gray-200 shadow-sm text-sm"
+                      @keyup.enter="searchCustomer"
+                    />
+                    <button
+                      @click="searchCustomer"
+                      class="px-3 py-2 rounded-md text-sm font-medium shadow-sm bg-teal-600 text-white hover:bg-teal-700"
+                    >
+                      Search
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Customer list -->
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                  <!-- Walking Customer option -->
+                  <div
+                    class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 rounded"
+                    @click="selectCustomer(customers[0])"
+                  >
+                    <div class="font-medium">Walking Customer</div>
+                    <div class="text-sm text-gray-600">No phone</div>
+                  </div>
+
+                  <!-- Other customers -->
+                  <div
+                    v-for="cust in searchCustomer().filter((c) => c.id !== 0)"
+                    :key="cust.id"
+                    class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 rounded"
+                    @click="selectCustomer(cust)"
+                  >
+                    <div class="font-medium">{{ cust.name }}</div>
+                    <div class="text-sm text-gray-600">{{ cust.phone }}</div>
+                    <div class="text-xs text-gray-500">{{ cust.email }}</div>
+                  </div>
+
+                  <div
+                    v-if="searchCustomer().length === 0"
+                    class="text-center py-4 text-gray-500"
+                  >
+                    No customers found
+                  </div>
+                </div>
+
+                <button
+                  @click="showAddCustomerForm"
+                  class="w-full mt-4 px-4 py-2 rounded-md text-sm font-medium shadow-sm bg-teal-600 text-white hover:bg-teal-700"
+                >
+                  Add New Customer
+                </button>
+              </div>
+
+              <!-- Customer Form View -->
+              <div v-else class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Name *</label
+                  >
+                  <input
+                    type="text"
+                    v-model="customer.name"
+                    placeholder="Customer name"
+                    required
+                    class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-500 border-gray-200 shadow-sm text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Phone *</label
+                  >
+                  <input
+                    type="text"
+                    v-model="customer.phone"
+                    placeholder="Customer phone"
+                    required
+                    class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-500 border-gray-200 shadow-sm text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Email</label
+                  >
+                  <input
+                    type="email"
+                    v-model="customer.email"
+                    placeholder="Customer email"
+                    class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-500 border-gray-200 shadow-sm text-sm"
+                  />
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                  <button
+                    @click="showCustomerForm = false"
+                    class="px-4 py-2 rounded-md border text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    @click="saveCustomer"
+                    :disabled="!customer.name || !customer.phone"
+                    class="px-5 py-2 rounded-md text-sm font-medium shadow-sm bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    Save Customer
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Cart Items -->
@@ -798,4 +1012,3 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
     </div>
   </AppLayout>
 </template>
-

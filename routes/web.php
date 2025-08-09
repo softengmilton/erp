@@ -37,6 +37,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // POS routes
         Route::resource('pos', \App\Http\Controllers\Store\Order\PosController::class)->only(['index', 'store']);
-        // I want to pass stock number as a query parameter to the POS index route
+
+        // customer management routes
+        Route::resource('customers', \App\Http\Controllers\Customer::class);
     });
 });
