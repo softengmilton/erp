@@ -177,6 +177,113 @@ function applyDiscount() {
 function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
+//
+function printInvoice() {
+  // Create a print window
+  const printWindow = window.open('', '_blank');
+
+  // Get the current date and time
+  const now = new Date();
+  const dateTime = now.toLocaleString();
+
+  // Create invoice HTML
+  let invoiceHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Invoice</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #333; }
+        .info { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .totals { margin-top: 20px; float: right; width: 300px; }
+        .footer { margin-top: 50px; text-align: center; color: #777; }
+      </style>
+    </head>
+    <body>
+      <div class="invoice">
+        <div class="header">
+          <h1>INVOICE</h1>
+          <p>Date: ${dateTime}</p>
+        </div>
+
+        <div class="info">
+          <div>
+            <strong>Customer:</strong> ${selectedCustomer.value?.name || 'Walking Customer'}<br>
+            ${selectedCustomer.value?.phone ? `<strong>Phone:</strong> ${selectedCustomer.value.phone}<br>` : ''}
+            ${selectedCustomer.value?.email ? `<strong>Email:</strong> ${selectedCustomer.value.email}` : ''}
+          </div>
+          <div>
+            <strong>Invoice #:</strong> INV-${new Date().getTime()}<br>
+            <strong>Stock #:</strong> ${selectedStock.value}
+          </div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  // Add cart items
+  cartItems.value.forEach(item => {
+    invoiceHTML += `
+      <tr>
+        <td>${item.product.name}</td>
+        <td>${formatCurrency(item.price)}</td>
+        <td>${item.quantity}</td>
+        <td>${formatCurrency(item.price * item.quantity)}</td>
+      </tr>
+    `;
+  });
+
+  // Add totals
+  invoiceHTML += `
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <p><strong>Subtotal:</strong> ${formatCurrency(cartNetTotal.value)}</p>
+          ${discountPercentage.value > 0 ? `<p><strong>Discount (${discountPercentage.value}%):</strong> -${formatCurrency(cartDiscount.value)}</p>` : ''}
+          ${adjustmentAmount.value != 0 ? `<p><strong>Adjustment:</strong> ${formatCurrency(adjustmentAmount.value)}</p>` : ''}
+          <p><strong>Total:</strong> ${formatCurrency(cartTotal.value)}</p>
+          <p><strong>Paid:</strong> ${formatCurrency(paidAmount.value)}</p>
+          <p><strong>Due:</strong> ${formatCurrency(dueAmount.value)}</p>
+          <p><strong>Payment Method:</strong> ${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</p>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for your business!</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Write the HTML to the print window
+  printWindow.document.write(invoiceHTML);
+  printWindow.document.close();
+
+  // Wait for content to load before printing
+  printWindow.onload = function() {
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+}
+//
 
 function submitOrder() {
   if (cartItems.value.length === 0) return;
@@ -206,7 +313,9 @@ function submitOrder() {
       adjustmentAmount.value = 0;
       paidAmount.value = 0;
       selectedPaymentMethod.value = "cash";
-      showPaymentDropdown.value = false;
+        showPaymentDropdown.value = false;
+
+        printInvoice();
     },
     onError: (errors) => {
       console.error("Order submission failed:", errors);
