@@ -2,7 +2,7 @@
 import AppLayout from "@/layouts/AppLayout.vue";
 import { Head,router } from "@inertiajs/vue3";
 import { ref } from "vue";
-import { formatCurrency, formatDate,formatCompactPriceHistory } from "@/utils/helper.js";
+import { formatCurrency, formatDate,formatCompactPriceHistory,formatAdjustmentHistory } from "@/utils/helper.js";
 
 const props = defineProps({
   stock: {
@@ -64,9 +64,19 @@ const submitPriceUpdate = () => {
 };
 
 const submitAdjustment = () => {
-  console.log("Submitting adjustment for:", selectedItem.value.id, adjustmentForm.value);
-  // TODO: Add your API call here
-  showAdjustmentModal.value = false;
+  router.post(
+    `/store/stocks/${props.stock.id}/adjustment/${selectedItem.value.store_product_id}`,
+    adjustmentForm.value,
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        showAdjustmentModal.value = false;
+      },
+      onError: (errors) => {
+        console.error("Adjustment failed:", errors);
+      },
+    }
+  );
 };
 </script>
 
@@ -415,7 +425,7 @@ const submitAdjustment = () => {
                 <div v-html="formatCompactPriceHistory(item.price_meta)"></div>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
-                {{ item.adjustment_meta || "No changes" }}
+                <div v-html="formatAdjustmentHistory(item.adjustment_data)"></div>
               </td>
               <td class="px-4 py-3 whitespace-nowrap space-x-2">
                 <button

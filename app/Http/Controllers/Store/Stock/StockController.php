@@ -249,27 +249,15 @@ class StockController extends Controller
     public function updateStockProductPrice(Request $request, $stock, $product)
     {
         try {
-            // dd($request->all(), $stock, $product);
             $validated = $request->validate([
                 'sale_price' => 'required|numeric|min:0',
                 'note' => 'nullable|string|max:255',
             ]);
 
-            // $stockItem = StoreStockItem::query()
-            //     ->where([
-            //         'store_stock_id' => $stock,
-            //         'store_product_id' => $product,
-            //     ])->first();
-
-            // dd($stockItem);
-            // dd($request->all(), $stock, $product);
             $stockItem = StoreStockItem::query()
                 ->where('store_stock_id', $stock)
                 ->where('store_product_id', $product)
                 ->first();
-            // dd($stockItem);
-
-
 
             if (!$stockItem) {
                 return Redirect::back()->with('toast', [
@@ -279,7 +267,6 @@ class StockController extends Controller
             }
 
             $oldPrice = $stockItem->sale_price;
-
             $oldMeta = $stockItem->price_meta;
 
             // Count how many items were sold at the old price
@@ -323,9 +310,59 @@ class StockController extends Controller
      */
     public function adjustStockProduct(Request $request, $stock, $product)
     {
+        // dd($request->all());
         try {
-        } catch (\Throwable $th) {
-            //throw $th;
+            $validated = $request->validate([
+                'type' => 'required|in:damage,return',
+                'quantity' => 'required|integer|min:1',
+                'note' => 'required|string|max:255',
+            ]);
+
+            $stockItem = StoreStockItem::query()
+                ->where('store_stock_id', $stock)
+                ->where('store_product_id', $product)
+                ->firstOrFail();
+
+            // Validate available quantity
+            if ($validated['quantity'] > $stockItem->quantity) {
+                return Redirect::back()->with('toast', [
+                    'type' => 'error',
+                    'message' => 'Adjustment quantity cannot exceed available stock.',
+                ]);
+            }
+
+            $oldMeta = $stockItem->adjustment_data ? json_decode($stockItem->adjustment_data, true) : [];
+
+            // Create new adjustment record
+            $newAdjustment = [
+                'type' => $validated['type'],
+                'quantity' => $validated['quantity'],
+                'note' => $validated['note'],
+                'adjusted_at' => now()->toDateTimeString(),
+                'adjusted_by' => auth()->id(),
+            ];
+
+            // Update stock item
+            $stockItem->update([
+                'quantity' => $validated['type'] === 'damage'
+                    ? $stockItem->quantity - $validated['quantity']
+                    : $stockItem->quantity + $validated['quantity'],
+                'adjustment_data' => json_encode([
+                    'current' => $newAdjustment,
+                    'history' => array_merge([$oldMeta['current'] ?? []], $oldMeta['history'] ?? []),
+                ]),
+            ]);
+
+            return Redirect::back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Stock adjustment recorded successfully.',
+                'summary' => ucfirst($validated['type']) . ' of ' . $validated['quantity'] . ' items',
+            ]);
+        } catch (Exception $e) {
+            return Redirect::back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Failed to adjust stock: ' . $e->getMessage(),
+            ]);
         }
     }
 }

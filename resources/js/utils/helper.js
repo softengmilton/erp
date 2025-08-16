@@ -33,4 +33,41 @@ const formatCompactPriceHistory = (priceMeta) => {
     return "Invalid data";
   }
 }
-export { formatCurrency, formatDate,formatCompactPriceHistory };
+   function formatAdjustmentHistory(adjustmentMeta) {
+    // Parse if it's a JSON string
+    const data = typeof adjustmentMeta === 'string' 
+        ? JSON.parse(adjustmentMeta) 
+        : adjustmentMeta;
+
+    if (!data) return "No adjustments";
+
+    const lines = [];
+
+    // Format current adjustment if exists
+    if (data.current && data.current.type) {
+        lines.push(formatAdjustmentLine(data.current));
+    }
+
+    // Format historical adjustments
+    if (Array.isArray(data.history)) {
+        data.history.forEach(adjustment => {
+            if (adjustment && adjustment.type) {
+                lines.push(formatAdjustmentLine(adjustment));
+            }
+        });
+    }
+
+    return lines.length > 0 
+        ? lines.join('<br>') 
+        : "No adjustments";
+}
+
+function formatAdjustmentLine(adjustment) {
+    const date = new Date(adjustment.adjusted_at).toLocaleDateString();
+    const type = adjustment.type === 'damage' ? 'Damaged' : 'Returned';
+    const quantity = Math.abs(adjustment.quantity);
+    const note = adjustment.note ? ` (${adjustment.note})` : '';
+
+    return `${date} - ${type} ${quantity} items${note}`;
+}
+export { formatCurrency, formatDate,formatCompactPriceHistory,formatAdjustmentHistory };
