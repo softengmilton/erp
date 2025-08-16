@@ -304,18 +304,16 @@ function submitOrder() {
     stock_number: selectedStock.value,
     customer_id: selectedCustomer.value ? selectedCustomer.value.id : null,
   };
-printInvoice();
   router.post("pos", orderData, {
     preserveScroll: true,
     onSuccess: () => {
+      printInvoice();
       cartItems.value = [];
       discountPercentage.value = 0;
       adjustmentAmount.value = 0;
       paidAmount.value = 0;
       selectedPaymentMethod.value = "cash";
-        showPaymentDropdown.value = false;
-
-        
+      showPaymentDropdown.value = false;  
     },
     onError: (errors) => {
       console.error("Order submission failed:", errors);
