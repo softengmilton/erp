@@ -2,7 +2,7 @@
 import AppLayout from "@/layouts/AppLayout.vue";
 import { Head,router } from "@inertiajs/vue3";
 import { ref } from "vue";
-import { formatCurrency, formatDate } from "@/utils/helper.js";
+import { formatCurrency, formatDate,formatCompactPriceHistory } from "@/utils/helper.js";
 
 const props = defineProps({
   stock: {
@@ -412,7 +412,7 @@ const submitAdjustment = () => {
               <td class="px-4 py-3 whitespace-nowrap">{{ item.quantity ?? 0 }}</td>
               <td class="px-4 py-3 whitespace-nowrap">{{ item.quantity_sold ?? 0 }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
-                {{ item.price_meta || "No changes" }}
+                <div v-html="formatCompactPriceHistory(item.price_meta)"></div>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
                 {{ item.adjustment_meta || "No changes" }}

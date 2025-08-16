@@ -250,10 +250,10 @@ class StockController extends Controller
     {
         try {
             // dd($request->all(), $stock, $product);
-            // $validated = $request->validate([
-            //     'sale_price' => 'required|numeric|min:0',
-            //     'note' => 'nullable|string|max:255',
-            // ]);
+            $validated = $request->validate([
+                'sale_price' => 'required|numeric|min:0',
+                'note' => 'nullable|string|max:255',
+            ]);
 
             // $stockItem = StoreStockItem::query()
             //     ->where([
@@ -262,12 +262,12 @@ class StockController extends Controller
             //     ])->first();
 
             // dd($stockItem);
-            dd($request->all(), $stock, $product);
+            // dd($request->all(), $stock, $product);
             $stockItem = StoreStockItem::query()
                 ->where('store_stock_id', $stock)
                 ->where('store_product_id', $product)
                 ->first();
-            dd($stockItem);
+            // dd($stockItem);
 
 
 
@@ -279,6 +279,8 @@ class StockController extends Controller
             }
 
             $oldPrice = $stockItem->sale_price;
+
+            $oldMeta = $stockItem->price_meta;
 
             // Count how many items were sold at the old price
             $quantitySold = DB::table('store_order_items')
@@ -294,7 +296,8 @@ class StockController extends Controller
             // Update to new sale price
             $stockItem->update([
                 'sale_price' => $validated['sale_price'],
-                'adjustment_data' => json_encode([
+                'price_meta' => json_encode([
+                    'previous' => $oldMeta,
                     'old_price' => $oldPrice,
                     'new_price' => $validated['sale_price'],
                     'quantity_sold' => $quantitySold,

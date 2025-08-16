@@ -12,5 +12,25 @@ const formatDate = (dateString) => {
   return `${day}.${month}.${year}`;
 };
 
-
-export { formatCurrency, formatDate };
+const formatCompactPriceHistory = (priceMeta) => {
+  if (!priceMeta) return "No changes";
+  
+  try {
+    let history = [];
+    let current = typeof priceMeta === 'string' ? JSON.parse(priceMeta) : priceMeta;
+    
+    while (current) {
+      history.push(`modified ${current.new_price} x ${current.quantity_sold}x`);
+      current = current.previous ? 
+        (typeof current.previous === 'string' ? JSON.parse(current.previous) : current.previous) : 
+        null;
+    }
+    
+    return history.join('<br>');
+    
+  } catch (e) {
+    console.error("Error parsing price meta:", e);
+    return "Invalid data";
+  }
+}
+export { formatCurrency, formatDate,formatCompactPriceHistory };
