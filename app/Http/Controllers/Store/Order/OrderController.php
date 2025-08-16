@@ -104,10 +104,63 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
-    {
-        //
+public function update(Request $request, $id)
+{
+    try {
+        $order = StoreOrder::findOrFail($id);
+
+        $request->validate([
+            'due_amount' => 'required|numeric',
+        ]);
+
+        if ($order->due_amount >= $request->due_amount) {
+            if ($order->due_amount == $request->due_amount) {
+                $order->update([
+                    'paid_amount' => $order->paid_amount + $request->due_amount,
+                    'due_amount' => 0,
+                    'payment_status' => 'paid',
+                ]);
+
+                return redirect()->back()->with([
+                    'toast' => [
+                        'type' => 'success',
+                        'message' => 'Payment updated successfully!'
+                    ]
+                ]);
+            } else {
+                $new_due_amount = $order->due_amount - $request->due_amount;
+
+                $order->update([
+                    'paid_amount' => $order->paid_amount + $request->due_amount,
+                    'due_amount' => $new_due_amount,
+                    'payment_status' => 'partial',
+                ]);
+
+                return redirect()->back()->with([
+                    'toast' => [
+                        'type' => 'success',
+                        'message' => 'Partial payment updated successfully!'
+                    ]
+                ]);
+            }
+        } else {
+            return redirect()->back()->with([
+                'toast' => [
+                    'type' => 'error',
+                    'message' => 'Payment amount cannot be greater than due amount.'
+                ]
+            ]);
+        }
+    } catch (\Exception $e) {
+        return redirect()->back()->with([
+            'toast' => [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]
+        ]);
     }
+}
+
 
     /**
      * Remove the specified resource from storage.
@@ -117,3 +170,22 @@ class OrderController extends Controller
         //
     }
 }
+
+
+//   if ($order->due_amount == $request->due_amount) {
+
+//                 $order->update([
+//                     'payment_status' => 'paid',
+//                     'due_amount' => $request->due_amount,
+//                 ]);
+//             } else {
+//                 $order->update([
+//                     'due_amount' => $request->due_amount,
+//                 ]);
+//             }
+//             return redirect()->back()->with([
+//                 'toast' => [
+//                     'type' => 'success',
+//                     'message' => 'Payment updated successfully!'
+//                 ]
+//             ]);

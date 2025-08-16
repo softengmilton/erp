@@ -53,6 +53,14 @@ const subtotal = computed(() => {
 const total = computed(() => {
     return subtotal.value - props.order.discount + props.order.adjustment;
 });
+
+// print receipt
+const printReceipt = () => {
+  if (typeof window !== 'undefined') {
+    window.print();
+  }
+}
+
 </script>
 
 <template>
@@ -224,7 +232,7 @@ const total = computed(() => {
           <!-- Action Buttons -->
           <div class="mt-8 flex flex-col gap-4 print:hidden sm:flex-row">
             <button
-              @click="window.print()"
+              @click="printReceipt"
               class="rounded-lg border  px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-700 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
             >
               Print Receipt

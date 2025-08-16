@@ -19,7 +19,7 @@ return new class extends Migration
             $table->double('total_amount', 10, 2)->default(0);
             $table->double('paid_amount', 10, 2)->default(0);
             $table->double('due_amount', 10, 2)->default(0);
-            $table->enum('payment_status', ['paid', 'due'])->default('due');
+            $table->enum('payment_status', ['paid', 'due', 'partial'])->default('due');
             $table->enum('payment_method', ['cash', 'card', 'bank', 'bkash', 'Nagad'])->default('cash');
             $table->double('discount', 10, 2)->default(0);
             $table->double('adjustment', 10, 2)->default(0);
