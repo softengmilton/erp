@@ -28,7 +28,7 @@ const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
 const showStockDropdown = ref(false);
 
 const searchProductQuery = ref("");
-const selectedStock = ref(props.stock?.stock_number || props.stockNumbers[0]);
+const selectedStock = ref(props.stock?.stock_number || props.stock.invoice_number);
 const selectedCategory = ref(null);
 const cartItems = ref([]);
 // Loading state
@@ -98,7 +98,7 @@ watch(selectedStock, (newStockNumber) => {
     {
       preserveState: true,
       preserveScroll: true,
-      only: ["stock"],
+      only: ["stock","productTypes"],
     }
   );
 });
@@ -307,15 +307,14 @@ function submitOrder() {
 
   router.post("pos", orderData, {
     preserveScroll: true,
-    onSuccess: () => {
+      onSuccess: () => {
+      printInvoice();
       cartItems.value = [];
       discountPercentage.value = 0;
       adjustmentAmount.value = 0;
       paidAmount.value = 0;
       selectedPaymentMethod.value = "cash";
-        showPaymentDropdown.value = false;
-
-        printInvoice();
+      showPaymentDropdown.value = false;
     },
     onError: (errors) => {
       console.error("Order submission failed:", errors);
