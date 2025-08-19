@@ -21,6 +21,7 @@ return new class extends Migration
             $table->double('other_fees_unit', 10, 2)->default(0);
             $table->double('total_cost', 10, 2)->default(0);
             $table->double('sale_price', 10, 2)->default(0);
+            $table->json('price_meta')->nullable();
             $table->json('adjustment_data')->nullable();
             $table->timestamps();
         });

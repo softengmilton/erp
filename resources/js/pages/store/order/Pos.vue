@@ -81,7 +81,7 @@ const cartDiscount = computed(
 const cartAdjustment = computed(() => adjustmentAmount.value);
 
 const cartTotal = computed(
-  () => cartNetTotal.value - cartDiscount.value + adjustmentAmount.value
+  () => cartNetTotal.value - cartDiscount.value - adjustmentAmount.value
 );
 
 const dueAmount = computed(() => {
@@ -304,10 +304,9 @@ function submitOrder() {
     stock_number: selectedStock.value,
     customer_id: selectedCustomer.value ? selectedCustomer.value.id : null,
   };
-
   router.post("pos", orderData, {
     preserveScroll: true,
-      onSuccess: () => {
+    onSuccess: () => {
       printInvoice();
       cartItems.value = [];
       discountPercentage.value = 0;
@@ -625,7 +624,7 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                 @click="applyDiscount"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Apply
+                Close
               </button>
             </div>
           </div>
@@ -667,12 +666,13 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                 type="number"
                 class="w-full border rounded px-2 py-1 text-sm"
                 placeholder="Amount"
+                min="0"
               />
               <button
                 @click="applyAdjustment"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Apply
+                Close
               </button>
             </div>
           </div>

@@ -215,7 +215,7 @@ function goToPage(url) {
           class="relative bg-white/90 backdrop-blur-md rounded-lg p-6 w-full max-w-md shadow-xl border border-white/20"
         >
           <h2 class="text-xl font-semibold mb-4 text-gray-900">
-            {{ isEditing ? "Edit" : "Add" }} Product Type
+            {{ isEditing ? "Edit" : "Add" }} Expense Type
           </h2>
 
           <label class="block mb-4">
