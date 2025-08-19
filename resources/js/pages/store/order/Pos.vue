@@ -194,15 +194,19 @@ function printInvoice() {
       <title>Invoice</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; }
+        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; box-sizing: border-box; }
         .header { text-align: center; margin-bottom: 20px; }
         .header h1 { margin: 0; color: #333; }
-        .info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .table { width: 100%; border-collapse: collapse; }
+        .info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+        .info > div { margin-bottom: 10px; }
+        .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         .table th { background-color: #f2f2f2; }
-        .totals { margin-top: 20px; float: right; width: 300px; }
-        .footer { margin-top: 50px; text-align: center; color: #777; }
+        .totals { margin-top: 20px; width: 100%; }
+        .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; }
+        .totals-table td { padding: 8px; border: 1px solid #ddd; }
+        .totals-table td:first-child { font-weight: bold; width: 50%; }
+        .footer { margin-top: 30px; text-align: center; color: #777; }
       </style>
     </head>
     <body>
@@ -254,13 +258,40 @@ function printInvoice() {
         </table>
 
         <div class="totals">
-          <p><strong>Subtotal:</strong> ${formatCurrency(cartNetTotal.value)}</p>
-          ${discountPercentage.value > 0 ? `<p><strong>Discount (${discountPercentage.value}%):</strong> -${formatCurrency(cartDiscount.value)}</p>` : ''}
-          ${adjustmentAmount.value != 0 ? `<p><strong>Adjustment:</strong> ${formatCurrency(adjustmentAmount.value)}</p>` : ''}
-          <p><strong>Total:</strong> ${formatCurrency(cartTotal.value)}</p>
-          <p><strong>Paid:</strong> ${formatCurrency(paidAmount.value)}</p>
-          <p><strong>Due:</strong> ${formatCurrency(dueAmount.value)}</p>
-          <p><strong>Payment Method:</strong> ${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</p>
+          <table class="totals-table">
+            <tr>
+              <td>Subtotal:</td>
+              <td>${formatCurrency(cartNetTotal.value)}</td>
+            </tr>
+            ${discountPercentage.value > 0 ? `
+            <tr>
+              <td>Discount (${discountPercentage.value}%):</td>
+              <td>-${formatCurrency(cartDiscount.value)}</td>
+            </tr>
+            ` : ''}
+            ${adjustmentAmount.value != 0 ? `
+            <tr>
+              <td>Adjustment:</td>
+              <td>${formatCurrency(adjustmentAmount.value)}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td>Total:</td>
+              <td>${formatCurrency(cartTotal.value)}</td>
+            </tr>
+            <tr>
+              <td>Paid:</td>
+              <td>${formatCurrency(paidAmount.value)}</td>
+            </tr>
+            <tr>
+              <td>Due:</td>
+              <td>${formatCurrency(dueAmount.value)}</td>
+            </tr>
+            <tr>
+              <td>Payment Method:</td>
+              <td>${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</td>
+            </tr>
+          </table>
         </div>
 
         <div class="footer">
