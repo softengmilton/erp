@@ -41,10 +41,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // customer management routes
         Route::resource('customers', \App\Http\Controllers\Customer::class);
 
-        // Inventory Sales Report routes
+        //  Sales Report management routes
         Route::resource('reports', \App\Http\Controllers\Store\Report\ReportController::class);
 
-        // Product reprorts
+        // Product reports management routes
         Route::resource('products-reports', \App\Http\Controllers\Store\Report\ProductReportController::class);
     });
 });

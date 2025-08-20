@@ -38,7 +38,6 @@ class ReportController extends Controller
                 'store_product_types.name as category_name',
                 DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as category_sales'),
                 DB::raw('SUM( store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as category_unit_cost'),
-              
             )
             ->whereBetween('store_order_items.created_at', [$startOfMonth, $endOfMonth])
             ->groupBy('order_date','store_product_types.id', 'store_product_types.name')
@@ -60,7 +59,7 @@ class ReportController extends Controller
                 ->get();
 
 
-            // Build categoryData with both sale & profit
+        // Build categoryData with both sale & profit
         $dailyCategoryData = [];
         $dailyTotalSales = [];
         $dailyTotalCost = [];
@@ -84,10 +83,6 @@ class ReportController extends Controller
         }
 
 
-            // dd($categorySales);
-            // dd($categorySales. $payment);
-            // dd($categoryData);
-
             return Inertia::render('store/reports/Report', [
                 'month' => now()->format('F Y'), // Example: August 2025
                 'dailyCategoryData' => $dailyCategoryData,
@@ -96,8 +91,8 @@ class ReportController extends Controller
                 'payments' => $payment,
             ]);
 
-            
-       
+
+
     }
 
     /**

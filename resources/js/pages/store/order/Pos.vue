@@ -28,7 +28,7 @@ const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
 const showStockDropdown = ref(false);
 
 const searchProductQuery = ref("");
-const selectedStock = ref(props.stock?.stock_number || props.stockNumbers[0]);
+const selectedStock = ref(props.stock?.stock_number || props.stock.invoice_number);
 const selectedCategory = ref(null);
 const cartItems = ref([]);
 // Loading state
@@ -81,7 +81,7 @@ const cartDiscount = computed(
 const cartAdjustment = computed(() => adjustmentAmount.value);
 
 const cartTotal = computed(
-  () => cartNetTotal.value - cartDiscount.value + adjustmentAmount.value
+  () => cartNetTotal.value - cartDiscount.value - adjustmentAmount.value
 );
 
 const dueAmount = computed(() => {
@@ -98,7 +98,7 @@ watch(selectedStock, (newStockNumber) => {
     {
       preserveState: true,
       preserveScroll: true,
-      only: ["stock"],
+      only: ["stock","productTypes"],
     }
   );
 });
@@ -179,30 +179,50 @@ function applyAdjustment() {
 }
 //
 function printInvoice() {
-  // Create a print window
   const printWindow = window.open('', '_blank');
 
-  // Get the current date and time
   const now = new Date();
   const dateTime = now.toLocaleString();
 
-  // Create invoice HTML
   let invoiceHTML = `
     <!DOCTYPE html>
     <html>
     <head>
       <title>Invoice</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; }
+        body {
+          font-family: 'Courier New', Courier, monospace;
+          margin: 0;
+          padding: 20px;
+          font-size: 14px;
+          color: #333;
+        }
+        .invoice {
+          max-width: 500px;
+          margin: 0 auto;
+          border: 1px solid #ccc;
+          padding: 20px;
+          box-sizing: border-box;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          background: #fff;
+        }
         .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { margin: 0; color: #333; }
-        .info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .table { width: 100%; border-collapse: collapse; }
-        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .table th { background-color: #f2f2f2; }
-        .totals { margin-top: 20px; float: right; width: 300px; }
-        .footer { margin-top: 50px; text-align: center; color: #777; }
+        .header h1 { margin: 0; font-size: 22px; letter-spacing: 2px; font-weight: bold; color: #222; }
+        .info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+        .info > div { margin-bottom: 10px; font-size: 13px; }
+
+        .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+        .table th, .table td { border: 1px solid #ccc; padding: 8px 10px; }
+        .table th { background-color: #f9f9f9; text-align: center; font-weight: 600; color: #444; }
+        .table td { background: #fff; }
+        .table tr:hover td { background-color: #fdfdfd; }
+
+        .totals { margin-top: 20px; width: 100%; }
+        .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; font-size: 13px; }
+        .totals-table td { padding: 8px 10px; border: 1px solid #ccc; }
+        .totals-table td:first-child { font-weight: bold; background: #f9f9f9; width: 50%; }
+
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
       </style>
     </head>
     <body>
@@ -236,7 +256,6 @@ function printInvoice() {
           <tbody>
   `;
 
-  // Add cart items
   cartItems.value.forEach(item => {
     invoiceHTML += `
       <tr>
@@ -248,19 +267,45 @@ function printInvoice() {
     `;
   });
 
-  // Add totals
   invoiceHTML += `
           </tbody>
         </table>
 
         <div class="totals">
-          <p><strong>Subtotal:</strong> ${formatCurrency(cartNetTotal.value)}</p>
-          ${discountPercentage.value > 0 ? `<p><strong>Discount (${discountPercentage.value}%):</strong> -${formatCurrency(cartDiscount.value)}</p>` : ''}
-          ${adjustmentAmount.value != 0 ? `<p><strong>Adjustment:</strong> ${formatCurrency(adjustmentAmount.value)}</p>` : ''}
-          <p><strong>Total:</strong> ${formatCurrency(cartTotal.value)}</p>
-          <p><strong>Paid:</strong> ${formatCurrency(paidAmount.value)}</p>
-          <p><strong>Due:</strong> ${formatCurrency(dueAmount.value)}</p>
-          <p><strong>Payment Method:</strong> ${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</p>
+          <table class="totals-table">
+            <tr>
+              <td>Subtotal:</td>
+              <td>${formatCurrency(cartNetTotal.value)}</td>
+            </tr>
+            ${discountPercentage.value > 0 ? `
+            <tr>
+              <td>Discount (${discountPercentage.value}%):</td>
+              <td>-${formatCurrency(cartDiscount.value)}</td>
+            </tr>
+            ` : ''}
+            ${adjustmentAmount.value != 0 ? `
+            <tr>
+              <td>Adjustment:</td>
+              <td>${formatCurrency(adjustmentAmount.value)}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td>Total:</td>
+              <td>${formatCurrency(cartTotal.value)}</td>
+            </tr>
+            <tr>
+              <td>Paid:</td>
+              <td>${formatCurrency(paidAmount.value)}</td>
+            </tr>
+            <tr>
+              <td>Due:</td>
+              <td>${formatCurrency(dueAmount.value)}</td>
+            </tr>
+            <tr>
+              <td>Payment Method:</td>
+              <td>${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</td>
+            </tr>
+          </table>
         </div>
 
         <div class="footer">
@@ -271,11 +316,9 @@ function printInvoice() {
     </html>
   `;
 
-  // Write the HTML to the print window
   printWindow.document.write(invoiceHTML);
   printWindow.document.close();
 
-  // Wait for content to load before printing
   printWindow.onload = function() {
     setTimeout(() => {
       printWindow.print();
@@ -283,6 +326,7 @@ function printInvoice() {
     }, 500);
   };
 }
+
 //
 
 function submitOrder() {
@@ -304,18 +348,16 @@ function submitOrder() {
     stock_number: selectedStock.value,
     customer_id: selectedCustomer.value ? selectedCustomer.value.id : null,
   };
-
   router.post("pos", orderData, {
     preserveScroll: true,
     onSuccess: () => {
+      printInvoice();
       cartItems.value = [];
       discountPercentage.value = 0;
       adjustmentAmount.value = 0;
       paidAmount.value = 0;
       selectedPaymentMethod.value = "cash";
-        showPaymentDropdown.value = false;
-
-        printInvoice();
+      showPaymentDropdown.value = false;
     },
     onError: (errors) => {
       console.error("Order submission failed:", errors);
@@ -626,7 +668,7 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                 @click="applyDiscount"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Apply
+                Close
               </button>
             </div>
           </div>
@@ -668,12 +710,13 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                 type="number"
                 class="w-full border rounded px-2 py-1 text-sm"
                 placeholder="Amount"
+                min="0"
               />
               <button
                 @click="applyAdjustment"
                 class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
               >
-                Apply
+                Close
               </button>
             </div>
           </div>
