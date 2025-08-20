@@ -115,173 +115,141 @@ const breadcrumbs = [
       </div>
 
       <!-- Export Buttons -->
-      <div class="flex gap-3">
-        <button
-          class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
-        >
-          📄 Export CSV
-        </button>
-        <button
-          class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
-        >
-          🖨️ Print
-        </button>
-      </div>
+ <!-- Export Buttons -->
+  <div class="flex gap-3">
+    <button
+      class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+    >
+      📄 Export CSV
+    </button>
+    <button
+      class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+    >
+      🖨️ Print
+    </button>
+  </div>
 
-      <!-- Summary Report category-column -->
-      <div class="bg-white border rounded-2xl p-6">
-        <h2
-          class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 flex items-center gap-3"
-        >
-          <span
-            class="bg-gradient-to-r from-purple-500 via-pink-500 to-red-400 bg-clip-text text-transparent"
-          >
-            Summary Report
-          </span>
-          <span
-            class="ml-2 px-3 py-1 text-sm sm:text-base font-semibold text-white bg-blue-600 rounded-full shadow-md"
-          >
-            {{ props.month }}
-          </span>
-        </h2>
+  <!-- Summary Report category-column -->
+  <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
+    <h2
+      class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
+    >
+      <span class="text-gray-800">
+        Summary Report
+      </span>
+      <span
+        class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
+      >
+        {{ props.month }}
+      </span>
+    </h2>
 
-        <div class="overflow-x-auto  border p-4">
-          <table class="min-w-full border-collapse">
-            <!-- Table Header -->
-            <thead
-              class="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 "
+    <div class="overflow-x-auto border border-gray-300 shadow-sm">
+      <table class="min-w-full border-collapse text-sm font-mono">
+        <!-- Table Header -->
+        <thead class="bg-gray-100">
+          <tr>
+            <th
+              class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
             >
-              <tr>
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  Date
-                </th>
+              Date
+            </th>
 
-                <!-- Sales Categories -->
-                <th
-                  v-for="category in categories"
-                  :key="'sales-' + category"
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  {{ category }} Sale
-                </th>
+            <!-- Sales Categories -->
+            <th
+              v-for="category in categories"
+              :key="'sales-' + category"
+              class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+            >
+              {{ category }} Sale
+            </th>
 
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-l border-gray-300"
-                >
-                  Total Sales
-                </th>
+            <th
+              class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+            >
+              Total Sales
+            </th>
 
-                <!-- Cost Categories -->
-                <th
-                  v-for="category in categories"
-                  :key="'cost-' + category"
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  {{ category }} Cost
-                </th>
+            <!-- Cost Categories -->
+            <th
+              v-for="category in categories"
+              :key="'cost-' + category"
+              class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+            >
+              {{ category }} Cost
+            </th>
 
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-l border-gray-300"
-                >
-                  Total Cost
-                </th>
+            <th
+              class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+            >
+              Total Cost
+            </th>
 
-                <!-- Payment Columns -->
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  Cash
-                </th>
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  Bkash
-                </th>
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  Nagad
-                </th>
-                <th
-                  class="sticky top-0 px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider"
-                >
-                  Due
-                </th>
-              </tr>
-            </thead>
+            <!-- Payment Columns -->
+            <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">Cash</th>
+            <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">Bkash</th>
+            <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">Nagad</th>
+            <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">Due</th>
+          </tr>
+        </thead>
 
-            <!-- Table Body -->
-            <tbody class="divide-y">
-              <tr
-                v-for="(categoriesData, date) in dailyCategoryData"
-                :key="date"
-              >
-                <!-- Date Badge -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-semibold text-xs"
-                    >{{ date }}</span
-                  >
-                </td>
+        <!-- Table Body -->
+        <tbody>
+          <tr
+            v-for="(categoriesData, date) in dailyCategoryData"
+            :key="date"
+            class="hover:bg-gray-50"
+          >
+            <!-- Date -->
+            <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
+                {{ date }}
+            </td>
+            <!-- Sales per category -->
+            <td
+              v-for="category in categories"
+              :key="'sales-data-' + category"
+              class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+            >
+              {{ categoriesData[category]?.category_sales ?? 0 }}
+            </td>
 
-                <!-- Sales per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'sales-data-' + category"
-                  class="px-6 py-4 whitespace-nowrap text-green-600 font-semibold"
-                >
-                  {{ categoriesData[category]?.category_sales ?? 0 }}
-                </td>
+            <!-- Total Sales -->
+            <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+              {{ dailyTotalSales[date] ?? 0 }}
+            </td>
 
-                <!-- Total Sales -->
-                <td
-                  class="px-6 py-4 font-bold text-gray-900 whitespace-nowrap border-l border-gray-300"
-                >
-                  {{ dailyTotalSales[date] ?? 0 }}
-                </td>
+            <!-- Cost per category -->
+            <td
+              v-for="category in categories"
+              :key="'cost-data-' + category"
+              class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
+            >
+              {{ categoriesData[category]?.category_unit_cost ?? 0 }}
+            </td>
 
-                <!-- Cost per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'cost-data-' + category"
-                  class="px-6 py-4 whitespace-nowrap text-red-500 font-semibold"
-                >
-                  {{ categoriesData[category]?.category_unit_cost ?? 0 }}
-                </td>
+            <!-- Total Cost -->
+            <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+              {{ dailyTotalCost[date] ?? 0 }}
+            </td>
 
-                <!-- Total Cost -->
-                <td
-                  class="px-6 py-4 font-bold text-gray-900 whitespace-nowrap border-l border-gray-300"
-                >
-                  {{ dailyTotalCost[date] ?? 0 }}
-                </td>
-
-                <!-- Payment Columns -->
-                <td class="px-6 py-4 font-semibold text-gray-700 whitespace-nowrap">
-                  {{
-                    payments.find((p) => p.order_date === date)?.total_cash_amount ?? 0
-                  }}
-                </td>
-                <td class="px-6 py-4 font-semibold text-gray-700 whitespace-nowrap">
-                  {{
-                    payments.find((p) => p.order_date === date)?.total_bkash_amount ?? 0
-                  }}
-                </td>
-                <td class="px-6 py-4 font-semibold text-gray-700 whitespace-nowrap">
-                  {{
-                    payments.find((p) => p.order_date === date)?.total_nagad_amount ?? 0
-                  }}
-                </td>
-                <td class="px-6 py-4 font-semibold text-gray-700 whitespace-nowrap">
-                  {{ payments.find((p) => p.order_date === date)?.total_due_amount ?? 0 }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <!-- Payment Columns -->
+            <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+              {{ payments.find((p) => p.order_date === date)?.total_cash_amount ?? 0 }}
+            </td>
+            <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+              {{ payments.find((p) => p.order_date === date)?.total_bkash_amount ?? 0 }}
+            </td>
+            <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+              {{ payments.find((p) => p.order_date === date)?.total_nagad_amount ?? 0 }}
+            </td>
+            <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+              {{ payments.find((p) => p.order_date === date)?.total_due_amount ?? 0 }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
     </div>
   </AppLayout>
 </template>
