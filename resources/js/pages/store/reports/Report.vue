@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
 import { Head } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import { router } from '@inertiajs/vue3';
@@ -19,6 +19,8 @@ const today = new Date();
 console.log(today);
 const selectedRange = ref([today, null])
 
+console.log("Initial range:", selectedRange.value);
+
 function formatDate(date) {
   if (!date) return null; // in case it's null
   const year = date.getFullYear();
@@ -27,20 +29,24 @@ function formatDate(date) {
   return `${year}-${month}-${day}`;
 }
 
-function applyRange() {
-  const formatted = selectedRange.value.map( d => d? formatDate(d) : null);
-  // console.log("Formatted:", formatted);
+const filterData = ref({
+  startDate: today ? formatDate(today) : null,
+  endDate: null,
+});
 
+// watcher to auto-apply range when changed
+watch(selectedRange, (newRange) => {
+    filterData.value.startDate = newRange[0] ? formatDate(newRange[0]) : null;
+    filterData.value.endDate = newRange[1] ? formatDate(newRange[1]) : null;
+    applyRange();
+}, { deep: true });
+
+function applyRange() {
   // Send array to Laravel
-  router.get('/store/reports', { range: formatted }, {
+    router.get('/store/reports', selectedRange.value, {
     preserveState: true,
-    replace: true
   });
 }
-
-
-// console.log(props.dailyCategoryData);
-// console.log(props.payments);
 
 // Extract all unique category names across all days
 const categories = Array.from(
@@ -121,7 +127,6 @@ const breadcrumbs = [
           <span v-else>❌ Hide Filters</span>
         </button>
       </div>
-      
       <!-- Filters -->
       <div
         v-if="filterToggle"
@@ -135,18 +140,6 @@ const breadcrumbs = [
             placeholder="Select date range"
             class="min-w-[260px]"
           />
-          <button
-          @click="applyRange"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Apply
-          </button>
-          <button
-          @click="resetRange"
-            class="px-4 py-2 bg-white border rounded-md hover:bg-gray-50"
-          >
-            Reset
-          </button>
 
           <span class="text-sm text-gray-600">
             <!-- Optional: show current range -->
