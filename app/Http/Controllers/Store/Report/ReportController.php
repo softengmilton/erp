@@ -16,126 +16,97 @@ class ReportController extends Controller
     /**
      * Display summary report.
      */
-    public function index(Request $request)
-    {
-
-        // default: full month
-        // $startOfMonth = now()->startOfMonth()->toDateString();
-        // $endOfMonth = now()->endOfMonth()->toDateString();
-
-        // //Check if vue sent a custom range
-        // $range = $request->query('range');
-
-        // dd($range);
-
-        // dd($request->all());
-
-        // if($range && is_array($range) && !empty($range[0])){
-        //     $startDate = Carbon::parse($range[0])->startOfDay();
-        //     $endDate = isset($range[1]) && $range[1] ? Carbon::parse($range[1])->endOfDay() : $startDate->endOfDay();
-
-        // } else {
-        // // fallback to default full month
-        //     $startDate = now()->startOfMonth()->toDateString();
-        //     $endDate   = now()->endOfMonth()->toDateString();
-        // }
-
-        $startDate = $request->startDate ? $request->startDate :  now()->startOfMonth()->toDateString();
-        $endDate = $request->endDate ? $request->endDate : now()->endOfMonth()->toDateString();
-
-        // dd($startDate, $endDate);
-
-        //Check if vue sent a custom range
-        $range = $request->query('range');
-
-        // dd($range);
-
-        // dd($request->all());
-
-        if($range && is_array($range) && !empty($range[0])){
-            $startDate = Carbon::parse($range[0])->startOfDay();
-            $endDate = isset($range[1]) && $range[1] ? Carbon::parse($range[1])->endOfDay() : $startDate->endOfDay();
-
-        } else {
-        // fallback to default full month
-            $startDate = now()->startOfMonth()->toDateString();
-            $endDate   = now()->endOfMonth()->toDateString();
-        }
-
-        // Product types report - category column wise
-        $categorySales = DB::table('store_order_items')
-            ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-            ->join('store_stock_items', function ($join) {
-                $join->on('store_products.id', '=', 'store_stock_items.store_product_id')
-                    ->on('store_order_items.store_stock_id', '=', 'store_stock_items.store_stock_id');
-            })
-            ->join('store_product_types', 'store_products.store_product_type_id', '=', 'store_product_types.id')
-            ->join('store_orders', 'store_order_items.store_order_id', '=', 'store_orders.id')
-            ->select(
-                DB::raw('DATE(store_order_items.created_at) as order_date'),
-                'store_product_types.id as category_id',
-                'store_product_types.name as category_name',
-                DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as category_sales'),
-                DB::raw('SUM( store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as category_unit_cost'),
-            )
-            ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-            ->groupBy('order_date', 'store_product_types.id', 'store_product_types.name')
-            ->orderByDesc('order_date')
-            ->get();
+public function index(Request $request)
+{
+    // Normalize date range
+        $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : null;
+        $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : null;
 
 
-        // Payment Details
-        $payment = DB::table('store_orders')
-            ->select(
-                DB::raw('DATE(created_at) as order_date'),
-                DB::raw('SUM(CASE WHEN store_orders.payment_method = "cash" THEN store_orders.paid_amount ELSE 0 END) as total_cash_amount'),
-                DB::raw('SUM(CASE WHEN store_orders.payment_method = "bkash" THEN store_orders.paid_amount ELSE 0 END) as total_bkash_amount'),
-                DB::raw('SUM(CASE WHEN store_orders.payment_method = "Nagad" THEN store_orders.paid_amount ELSE 0 END) as total_nagad_amount'),
-                DB::raw('SUM(due_amount) as total_due_amount')
-            )
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->get();
+        \Log::info('Problem fetching data', ['startDate' => $startDate, 'endDate' => $endDate]);
 
-                
-        // dd($categorySales);
+    // Single query: category sales + payments
+    $reportData = DB::table('store_orders')
+        ->join('store_order_items', 'store_orders.id', '=', 'store_order_items.store_order_id')
+        ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
+        ->join('store_stock_items', function ($join) {
+            $join->on('store_products.id', '=', 'store_stock_items.store_product_id')
+                 ->on('store_order_items.store_stock_id', '=', 'store_stock_items.store_stock_id');
+        })
+        ->join('store_product_types', 'store_products.store_product_type_id', '=', 'store_product_types.id')
+        ->select(
+            DB::raw('DATE(store_order_items.created_at) as order_date'),
+            'store_product_types.id as category_id',
+            'store_product_types.name as category_name',
 
-        // dd($categorySales);
+            // Category
+            DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as category_sales'),
+            DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit)) as category_unit_cost'),
 
-        // Build categoryData with both sale & profit
-        $dailyCategoryData = [];
-        $dailyTotalSales = [];
-        $dailyTotalCost = [];
+            // Payments
+            DB::raw('SUM(CASE WHEN store_orders.payment_method = "cash" THEN store_orders.paid_amount ELSE 0 END) as total_cash_amount'),
+            DB::raw('SUM(CASE WHEN store_orders.payment_method = "bkash" THEN store_orders.paid_amount ELSE 0 END) as total_bkash_amount'),
+            DB::raw('SUM(CASE WHEN store_orders.payment_method = "Nagad" THEN store_orders.paid_amount ELSE 0 END) as total_nagad_amount'),
+            DB::raw('SUM(store_orders.due_amount) as total_due_amount')
+        )
+        ->when($startDate && $endDate, function($query) use ($startDate, $endDate) {
+            return $query->whereBetween(DB::raw('DATE(store_order_items.created_at)'), [$startDate, $endDate]);
+        })
+        ->when($startDate && !$endDate, function($query) use ($startDate) {
+            return $query->whereDate(DB::raw('DATE(store_order_items.created_at)'), $startDate);
+        })
+        ->when(!$startDate && !$endDate, function($query) {
+            $from = now()->startOfMonth();
+            $to   = now()->endOfMonth();
+            return $query->whereBetween(DB::raw('DATE(store_order_items.created_at)'), [$from, $to]);
+        })
+        ->groupBy('order_date', 'store_product_types.id', 'store_product_types.name')
+        ->orderByDesc('order_date')
+        ->get();
 
-        foreach ($categorySales as $item) {
-            // dd($item);
-            $date = $item->order_date;
+    // Re-shape into nested daily data
+    $dailyReport = [];
 
-            if (!isset($dailyCategoryData[$date])) {
-                $dailyCategoryData[$date] = [];
-                $dailyTotalSales[$date] = 0;
-                $dailyTotalCost[$date] = 0;
-            }
+    foreach ($reportData as $row) {
+        $date = $row->order_date;
 
-            $dailyCategoryData[$date][$item->category_name] = [
-                'category_sales' => $item->category_sales,
-                'category_unit_cost' => $item->category_unit_cost,
+        if (!isset($dailyReport[$date])) {
+            $dailyReport[$date] = [
+                'categories' => [],
+                'total_sales' => 0,
+                'total_cost' => 0,
+                'payments' => [
+                    'cash' => 0,
+                    'bkash' => 0,
+                    'nagad' => 0,
+                    'due' => 0,
+                ],
             ];
-
-            $dailyTotalSales[$date] += $item->category_sales;
-            $dailyTotalCost[$date] += $item->category_unit_cost;
         }
 
-        // dd($dailyCategoryData);
+        // Category breakdown
+        $dailyReport[$date]['categories'][$row->category_name] = [
+            'category_sales' => $row->category_sales,
+            'category_unit_cost' => $row->category_unit_cost,
+        ];
 
-        return Inertia::render('store/reports/Report', [
-            'month' => now()->format('F Y'), // Example: August 2025
-            'dailyCategoryData' => $dailyCategoryData,
-            'dailyTotalSales' => $dailyTotalSales,
-            'dailyTotalCost' => $dailyTotalCost,
-            'payments' => $payment,
-        ]);
+        $dailyReport[$date]['total_sales'] += $row->category_sales;
+        $dailyReport[$date]['total_cost'] += $row->category_unit_cost;
+
+        // Payments (same for each category row → sum only once per date)
+        $dailyReport[$date]['payments']['cash'] = $row->total_cash_amount;
+        $dailyReport[$date]['payments']['bkash'] = $row->total_bkash_amount;
+        $dailyReport[$date]['payments']['nagad'] = $row->total_nagad_amount;
+        $dailyReport[$date]['payments']['due'] = $row->total_due_amount;
     }
+
+    // dd($dailyReport);
+    return Inertia::render('store/reports/Report', [
+        'month' => now()->format('F Y'),
+        'dailyReport' => $dailyReport,
+    ]);
+}
+
 
     /**
      * Show the form for creating a new resource.

@@ -9,17 +9,16 @@ import { router } from '@inertiajs/vue3';
 const filterToggle = ref(false);
 const props = defineProps({
   month: String,
-  dailyCategoryData: Object,
-  dailyTotalSales: Object,
-  dailyTotalCost: Object,
-  payments: Array,
+  dailyReport:Object,
 });
+
+console.log(props.dailyReport);
 
 const today = new Date();
 console.log(today);
 const selectedRange = ref([today, null])
 
-console.log("Initial range:", selectedRange.value);
+
 
 function formatDate(date) {
   if (!date) return null; // in case it's null
@@ -36,6 +35,7 @@ const filterData = ref({
 
 // watcher to auto-apply range when changed
 watch(selectedRange, (newRange) => {
+  
     filterData.value.startDate = newRange[0] ? formatDate(newRange[0]) : null;
     filterData.value.endDate = newRange[1] ? formatDate(newRange[1]) : null;
     applyRange();
@@ -43,7 +43,7 @@ watch(selectedRange, (newRange) => {
 
 function applyRange() {
   // Send array to Laravel
-    router.get('/store/reports', selectedRange.value, {
+    router.get('/store/reports', filterData.value, {
     preserveState: true,
   });
 }
@@ -51,8 +51,8 @@ function applyRange() {
 // Extract all unique category names across all days
 const categories = Array.from(
   new Set(
-    Object.values(props.dailyCategoryData).flatMap((categoriesByDate) =>
-      Object.keys(categoriesByDate)
+    Object.values(props.dailyReport).flatMap((day) =>
+      Object.keys(day.categories)
     )
   )
 );
@@ -222,57 +222,67 @@ const breadcrumbs = [
             </thead>
 
             <!-- Table Body -->
-            <tbody>
-              <tr v-for="(categoriesData, date) in dailyCategoryData" :key="date" class="hover:bg-gray-50">
-                <!-- Date -->
-                <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
-                  {{ date }}
-                </td>
+          <tbody>
+  <tr
+    v-for="(dayReport, date) in props.dailyReport"
+    :key="date"
+    class="hover:bg-gray-50"
+  >
+    <!-- Date -->
+    <td
+      class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
+    >
+      {{ date }}
+    </td>
 
-                <!-- Sales per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'sales-data-' + category"
-                  class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
-                >
-                  {{ categoriesData[category]?.category_sales ?? 0 }}
-                </td>
+    <!-- Sales per category -->
+    <td
+      v-for="category in categories"
+      :key="'sales-data-' + category"
+      class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+    >
+      {{ dayReport.categories[category]?.category_sales ?? 0 }}
+    </td>
 
-                <!-- Total Sales -->
-                <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
-                  {{ dailyTotalSales[date] ?? 0 }}
-                </td>
+    <!-- Total Sales -->
+    <td
+      class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+    >
+      {{ dayReport.total_sales ?? 0 }}
+    </td>
 
-                <!-- Cost per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'cost-data-' + category"
-                  class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
-                >
-                  {{ categoriesData[category]?.category_unit_cost ?? 0 }}
-                </td>
+    <!-- Cost per category -->
+    <td
+      v-for="category in categories"
+      :key="'cost-data-' + category"
+      class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
+    >
+      {{ dayReport.categories[category]?.category_unit_cost ?? 0 }}
+    </td>
 
-                <!-- Total Cost -->
-                <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
-                  {{ dailyTotalCost[date] ?? 0 }}
-                </td>
+    <!-- Total Cost -->
+    <td
+      class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+    >
+      {{ dayReport.total_cost ?? 0 }}
+    </td>
 
-                <!-- Payment Columns -->
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+    <!-- Payment Columns -->
+    <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+      {{ dayReport.payments.cash ?? 0 }}
+    </td>
+    <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+      {{ dayReport.payments.bkash ?? 0 }}
+    </td>
+    <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+      {{ dayReport.payments.nagad ?? 0 }}
+    </td>
+    <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+      {{ dayReport.payments.due ?? 0 }}
+    </td>
+  </tr>
+</tbody>
 
-                  {{ payments.find((p) => p.order_date === date)?.total_cash_amount ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ payments.find((p) => p.order_date === date)?.total_bkash_amount ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ payments.find((p) => p.order_date === date)?.total_nagad_amount ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ payments.find((p) => p.order_date === date)?.total_due_amount ?? 0 }}
-                </td>
-              </tr>
-            </tbody>
           </table>
         </div>
       </div>
