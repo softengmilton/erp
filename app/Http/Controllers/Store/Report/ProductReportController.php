@@ -17,24 +17,30 @@ class ProductReportController extends Controller
     public function index(Request $request)
     {
 
-    // date range
+        // dd($request->all());
+    // Date range
     $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
     $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
+
+
+    // Pick product type from today's sales
+    $productTypeId = DB::table('store_order_items')
+        ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
+        ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
+        ->value('store_products.store_product_type_id');
+    // dd($productTypeId);
+
+
+    //Category id
+    $category_id = $request->category_id ? $request->category_id : $productTypeId;
+
 
 
         // Categories
         $allCategory = DB::table('store_product_types')
             ->select('store_product_types.id', 'store_product_types.name')->get();
             // dd($allCategory);
-    
 
-        // Pick product type from today's sales
-        $productTypeId = DB::table('store_order_items')
-            ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-            ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-            ->value('store_products.store_product_type_id');
-
-        // dd($productTypeId);
         $dailyReport = [];
         $total_product_sales = 0;
         $total_product_cost = 0;
@@ -43,7 +49,7 @@ class ProductReportController extends Controller
         $categoryProfits = [];
 
 
-        if($productTypeId){
+        if($category_id){
             $ProductReports = DB::table('store_order_items')
             ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
             ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
@@ -57,7 +63,7 @@ class ProductReportController extends Controller
 
             )
             ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-            ->where('store_products.store_product_type_id', $productTypeId)
+            ->where('store_products.store_product_type_id', $category_id)
             ->groupBy('order_date', 'store_products.name', 'store_products.id')
             ->orderBy('order_date')
             ->get();
@@ -119,8 +125,6 @@ class ProductReportController extends Controller
                 'profit' => collect($categoryProfits)->sortDesc()->first()
             ] : null;
 
-        }else{
-            dd("No sales found for today");
         }
 
 
@@ -128,10 +132,10 @@ class ProductReportController extends Controller
         return Inertia::render('store/reports/ProductReport', [
             'allCategory' => $allCategory,
             'dailyReport' => $dailyReport,
-            'total_product_sales' => $total_product_sales,
-            'total_profit' => $total_profit,
-            'bestSellingCategory' => $bestSellingCategory,
-            'bestProfitableCategory' => $bestProfitableCategory,
+            'total_product_sales' => $total_product_sales ?? 0,
+            'total_profit' => $total_profit ?? 0,
+            'bestSellingCategory' => $bestSellingCategory ?? 0,
+            'bestProfitableCategory' => $bestProfitableCategory ?? 0,
         ]);
     }
 

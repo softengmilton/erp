@@ -1,24 +1,35 @@
 <script setup>
   import AppLayout from "@/layouts/AppLayout.vue";
   import { Head, router } from "@inertiajs/vue3";
-  import { ref, watch } from "vue";
+  import { ref, watch, reactive, computed } from "vue";
   import VueDatePicker from "@vuepic/vue-datepicker";
   import "@vuepic/vue-datepicker/dist/main.css";
 
   const filterToggle = ref(false);
 
 const props = defineProps({
-    // allCategory: Array,
+    allCategory: Array,
     dailyReport: Object,
     total_product_sales: Number,
     total_profit: Number,
     bestSellingCategory: Object,        
     bestProfitableCategory: Object,
-  });
+});
+
+// Make reactive copies
+const reactiveReport = reactive({
+  dailyReport: props.dailyReport,
+  allCategory: props.allCategory,
+  total_product_sales: props.total_product_sales,
+  total_profit: props.total_profit,
+  bestSellingCategory: props.bestSellingCategory,
+  bestProfitableCategory: props.bestProfitableCategory,
+});
+
+// console.log(props.dailyReport);
 
 
-// const selectedCategoryy = ref(0);
-// console.log(selectedCategoryy.value);
+const selectedCategory = ref();
 
   const today = new Date();
   console.log(today);
@@ -34,44 +45,105 @@ const props = defineProps({
     return `${year}-${month}-${day}`;
   }
 
+  
   const filterData = ref({
     startDate: today ? formatDate(today) : null,
     endDate: null,
+    category_id: 0,
   });
 
+  const x = computed
   // Watcher: apply range on change
   watch(
-    selectedRange,
-    (newRange) => {
-      filterData.value.startDate = newRange[0] ? formatDate(newRange[0]) : null;
-      filterData.value.endDate = newRange[1] ? formatDate(newRange[1]) : null;
-      applyRange();
-    },
-    { deep: true }
-  );
+  [selectedRange, selectedCategory], // ✅ array of sources
+    ([newRange, newCat]) => {
+    const start = newRange[0] ? formatDate(newRange[0]) : null;
+    const end = newRange[1] ? formatDate(newRange[1]) : start;
+    
+    filterData.value.startDate = start;
+    filterData.value.endDate = end;
 
-    function applyRange() {
-    router.get("/store/products-reports", filterData.value, {
-      preserveState: true,
-    });
-  }
-
-const aggregatedCategories = Array.from(
-  new Set(
-    Object.values(props.dailyReport).flatMap( (day) => Object.keys(day.categories) )
-  )
+    filterData.value.category_id = newCat; // ✅ set category_id
+    console.log(filterData.value.category_id);
+    applyRange();
+  },
+  { deep: true }
 );
 
 
+    function applyRange() {
+    router.get("/store/products-reports", filterData.value,{
+      preserveState: true,
+      replace: true,
 
-const  toggleFilter = () => {
-  filterToggle.value = !filterToggle.value;
-}
+      onSuccess: (page) => {
+        // Update reactive props when Inertia responds
+        reactiveReport.dailyReport = page.props.dailyReport;
+        reactiveReport.total_product_sales = page.props.total_product_sales;
+        reactiveReport.total_profit = page.props.total_profit;
+        reactiveReport.bestSellingCategory = page.props.bestSellingCategory;
+        reactiveReport.bestProfitableCategory = page.props.bestProfitableCategory;
+      },
+    });
+  }
 
-  const breadcrumbs = [
-    { title: "Dashboard", href: "/dashboard" },
-    { title: "Prodcuts Reports", href: "/store/products-reports" },
-];
+const aggregatedCategories = computed(() => {
+  return Array.from(
+    new Set(
+      Object.values(reactiveReport.dailyReport).flatMap(day =>
+        Object.keys(day.categories)
+      )
+    )
+  );
+});
+
+  const exportTableToCSV = () => {
+    const table = document.querySelector("table");
+    const rows = table.querySelectorAll("tr");
+
+    const csv = [];
+    rows.forEach((row, rowIndex) => {
+      const cols = row.querySelectorAll("th, td");
+      const rowData = [];
+
+      cols.forEach((col, colIndex) => {
+        const rawData = col.innerText.trim();
+
+        // Fix date column (first column, skip header)
+        const data =
+          colIndex === 0 && rowIndex > 0 && !isNaN(new Date(rawData))
+            ? new Date(rawData).toISOString().split("T")[0]
+            : rawData;
+
+        // Escape quotes
+        const safeData = data.replace(/"/g, '""');
+        rowData.push(`"${safeData}"`);
+      });
+
+      csv.push(rowData.join(","));
+    });
+
+    const csvFile = new Blob([csv.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(csvFile);
+    link.download = `summary_report_${new Date()
+      .toISOString()
+      .split("T")[0]}.csv`;
+    link.click();
+  };
+
+
+  const  toggleFilter = () => {
+    filterToggle.value = !filterToggle.value;
+  }
+
+    const breadcrumbs = [
+      { title: "Dashboard", href: "/dashboard" },
+      { title: "Prodcuts Reports", href: "/store/products-reports" },
+  ];
 
 </script>
 
@@ -90,7 +162,7 @@ const  toggleFilter = () => {
             <h3 class="text-sm font-medium text-gray-500">Total Sales</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ total_product_sales }}
+            BDT {{ reactiveReport.total_product_sales }}
           </p>
         </div>
 
@@ -101,7 +173,7 @@ const  toggleFilter = () => {
             <h3 class="text-sm font-medium text-gray-500">Profit</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ total_profit }}
+            BDT {{ reactiveReport.total_profit }}
           </p>
         </div>
 
@@ -112,10 +184,10 @@ const  toggleFilter = () => {
             <h3 class="text-sm font-medium text-gray-500">Top Profit Category</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ props.bestProfitableCategory?.name || 'No data' }}
+            {{ reactiveReport.bestProfitableCategory?.name || 'No data' }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Profit: BDT {{ props.bestProfitableCategory?.profit || 0 }}
+            Profit: BDT {{ reactiveReport.bestProfitableCategory?.profit || 0 }}
           </p>
         </div>
 
@@ -127,10 +199,10 @@ const  toggleFilter = () => {
             <h3 class="text-sm font-medium text-gray-500">Best Seller</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ props.bestSellingCategory?.name || "No data" }}
+            {{ reactiveReport.bestSellingCategory?.name || "No data" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Sales: {{ props.bestSellingCategory?.sales || 0 }}
+            Sales: {{ reactiveReport.bestSellingCategory?.sales || 0 }}
           </p>
         </div>
       </div>
@@ -184,14 +256,13 @@ const  toggleFilter = () => {
                 v-model="selectedCategory"
                 class="w-full border border-gray-300 rounded p-2"
               >
-                <option>All Categories</option>
-                <!-- <option
-                  v-for="category in allCategory"
+                 <option
+                  v-for="category in reactiveReport.allCategory"
                   :key="category.id"
-                  :value="5"
+                  :value="category.id"
                 >
                     {{ category.name }}
-                </option> -->
+                </option> 
               </select>
             </div>
           </div>
@@ -213,132 +284,106 @@ const  toggleFilter = () => {
         </h2>
 
         <div class="overflow-x-auto border border-gray-300 shadow-sm">
-          <table class="min-w-full border-collapse text-sm font-mono">
-            <!-- Table Header -->
-            <thead class="bg-gray-100">
-              <tr>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Date
-                </th>
+    <table class="min-w-full border-collapse text-sm font-mono">
+  <!-- Table Header -->
+  <thead class="bg-gray-100">
+    <tr>
+      <th
+        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+      >
+        Date
+      </th>
 
-                <!-- Sales Categories -->
-                <th
-                  v-for="category in aggregatedCategories"
-                  :key="category"
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  {{ category }} Sale
-                </th>
+      <!-- Sales Categories -->
+      <th
+        v-for="category in aggregatedCategories"
+        :key="category + '-sale-header'"
+        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+      >
+        {{ category }} Sale
+      </th>
 
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Total Sales
-                </th>
+      <th
+        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+      >
+        Total Sales
+      </th>
 
-                <!-- Cost Categories -->
-                <th
-                  v-for="category in aggregatedCategories"
-                  :key="category"
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  {{ category }} Cost
-                </th>
+      <!-- Cost Categories -->
+      <th
+        v-for="category in aggregatedCategories"
+        :key="category + '-cost-header'"
+        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+      >
+        {{ category }} Cost
+      </th>
 
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Total Cost
-                </th>
+      <th
+        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+      >
+        Total Cost
+      </th>
+    </tr>
+  </thead>
 
-                <!-- Payment Columns -->
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Cash
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Bkash
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Nagad
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Due
-                </th>
-              </tr>
-            </thead>
+  <!-- Table Body -->
+  <tbody>
+    <!-- Rows when data exists -->
+    <tr
+      v-if="reactiveReport.dailyReport && Object.keys(reactiveReport.dailyReport).length"
+      v-for="(day, date) in reactiveReport.dailyReport"
+      :key="date"
+      class="hover:bg-gray-50"
+    >
+      <!-- Date -->
+      <td
+        class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
+      >
+        {{ date }}
+      </td>
 
-            <!-- Table Body -->
-            <tbody>
-              <tr 
-                v-for="(day, date) in props.dailyReport"
-                :key="date"
-                class="hover:bg-gray-50"
-              >
-                <!-- Date -->
-                <td
-                  class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
-                >
-                  {{ date }}
-                </td>
+      <!-- Sales per category -->
+      <td
+        v-for="category in aggregatedCategories"
+        :key="date + '-' + category + '-sale'"
+        class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+      >
+        {{ day.categories[category]?.product_sales ?? 0 }}
+      </td>
 
-                <!-- Sales per category -->
-                <td
-                  v-for="category in aggregatedCategories"
-                  :key="category"
-                  class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
-                >
-                  {{ day.categories[category]?.product_sales ?? 0}}
-                </td>
+      <!-- Total Sales -->
+      <td
+        class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+      >
+        {{ day.total_sales }}
+      </td>
 
-                <!-- Total Sales -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                  {{ day.total_sales }}
-                </td>
+      <!-- Cost per category -->
+      <td
+        v-for="category in aggregatedCategories"
+        :key="date + '-' + category + '-cost'"
+        class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
+      >
+        {{ day.categories[category]?.product_cost ?? 0 }}
+      </td>
 
-                <!-- Cost per category -->
-                <td
-                  v-for="category in aggregatedCategories"
-                  :key="category"
-                  class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
-                >
-                  {{ day.categories[category]?.product_cost ?? 0 }}
-                </td>
+      <!-- Total Cost -->
+      <td
+        class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+      >
+        {{ day.total_cost }}
+      </td>
+    </tr>
 
-                <!-- Total Cost -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                  {{ day.total_cost }}
-                </td>
+    <!-- No Data Row -->
+    <tr v-else>
+      <td colspan="100%" class="text-center py-4 text-gray-500">
+        No data found
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-                <!-- Payment Columns -->
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
