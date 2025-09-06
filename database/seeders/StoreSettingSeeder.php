@@ -14,7 +14,7 @@ class StoreSettingSeeder extends Seeder
     {
         \App\Models\StoreSetting::create([
             'key'   => 'business_title',
-            'value' => 'My Business',
+            'value' => 'Jannat Park Store',
         ]);
 
         \App\Models\StoreSetting::create([
