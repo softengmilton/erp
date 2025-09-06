@@ -7,6 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'; // ✅ Correct - this is the plugin
+import VueApexCharts from "vue3-apexcharts"; // ✅ import ApexCharts
 
 
 
@@ -17,12 +18,18 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(ZiggyVue)
-            .use(CkeditorPlugin)
-            .mount(el);
+        const app = createApp({
+            render: () => h(App as any, props) // 👈 cast fixes TS error
+        });
+
+        app.use(plugin);
+        app.use(ZiggyVue);
+        app.use(VueApexCharts);
+        app.use(CkeditorPlugin);
+
+        app.mount(el);
     },
+
     progress: {
         color: '#4B5563',
     },
