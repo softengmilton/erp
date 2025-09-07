@@ -59,7 +59,22 @@ class StoreSettingSeeder extends Seeder
 
         \App\Models\StoreSetting::create([
             'key'   => 'logo',
-            'value' => 'default-logo.png',
+            'value' => 'assets/store/logo.png',
+        ]);
+
+        \App\Models\StoreSetting::create([
+            'key' => 'current_balance',
+            'value' => '0',
+        ]);
+
+        \App\Models\StoreSetting::create([
+            'key' => 'bkash_balance',
+            'value' => '0',
+        ]);
+
+        \App\Models\StoreSetting::create([
+            'key' => 'total_balance',
+            'value' => '0',
         ]);
     }
 }

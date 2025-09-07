@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Global
     Route::get('/dashboard', [\App\Http\Controllers\Global\DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/withdrawals/store', [\App\Http\Controllers\Store\Settings\SettingsController::class, 'withdrawals'])->name('withdrawals.store');
 
 
     Route::name('store.')->prefix('store')->group(function () {
