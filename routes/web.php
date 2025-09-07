@@ -32,6 +32,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('stocks/{stock}/update-price/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'updateStockProductPrice'])->name('stocks.update-price');
         Route::post('stocks/{stock}/adjustment/{product}', [\App\Http\Controllers\Store\Stock\StockController::class, 'adjustStockProduct'])->name('stocks.adjustment');
 
+        Route::resource('stock-lists', \App\Http\Controllers\Store\Stock\MovementLogsController::class);
+
         // Expense management routes
         Route::resource('expenses', \App\Http\Controllers\Store\Expense\ExpenseController::class);
         Route::resource('expense-types', \App\Http\Controllers\Store\Expense\TypeController::class);
