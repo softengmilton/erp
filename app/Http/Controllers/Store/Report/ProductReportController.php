@@ -17,19 +17,27 @@ class ProductReportController extends Controller
     public function index(Request $request)
     {
 
-        // dd($request->all());
     // Date range
     $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
     $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
-
+    if ($request->startDate && $request->endDate) {
+        $start = Carbon::parse($request->startDate);
+        $end   = Carbon::parse($request->endDate);
+        
+        $dateLabel = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
+    } elseif ($request->startDate) {
+        $dateLabel = Carbon::parse($request->startDate)->format('M j, Y');
+    } elseif ($request->endDate) {
+        $dateLabel = Carbon::parse($request->endDate)->format('M j, Y');
+    } else {
+        $dateLabel = now()->format('F Y');
+    }
 
     // Pick product type from today's sales
     $productTypeId = DB::table('store_order_items')
         ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
         ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
         ->value('store_products.store_product_type_id');
-    // dd($productTypeId);
-
 
     //Category id
     $category_id = $request->category_id ? $request->category_id : $productTypeId;
@@ -130,6 +138,7 @@ class ProductReportController extends Controller
 
 
         return Inertia::render('store/reports/ProductReport', [
+            'dateLabel' => $dateLabel,
             'allCategory' => $allCategory,
             'dailyReport' => $dailyReport,
             'total_product_sales' => $total_product_sales ?? 0,

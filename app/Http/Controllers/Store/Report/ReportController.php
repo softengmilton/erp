@@ -15,12 +15,30 @@ class ReportController extends Controller
      */
     /**
      * Display summary report.
+     * 
+     *
      */
 public function index(Request $request)
 {
     // date range
     $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
     $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
+    if ($request->startDate && $request->endDate) {
+        $start = Carbon::parse($request->startDate);
+        $end   = Carbon::parse($request->endDate);
+        
+        $dateLabel = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
+    } elseif ($request->startDate) {
+        $dateLabel = Carbon::parse($request->startDate)->format('M j, Y');
+    } elseif ($request->endDate) {
+        $dateLabel = Carbon::parse($request->endDate)->format('M j, Y');
+    } else {
+        $dateLabel = now()->format('F Y');
+    }
+
+
+
+    
 
     \Log::info('Fetching report', ['startDate' => $startDate, 'endDate' => $endDate]);
 
@@ -160,7 +178,7 @@ public function index(Request $request)
     ] : null;
 
     return Inertia::render('store/reports/Report', [
-        'month' => now()->format('F Y'),
+        'dateLabel' => $dateLabel,
         'dailyReport' => $dailyReport,
         'bestSellingCategory' => $bestSellingCategory,
         'bestProfitableCategory' => $bestProfitableCategory,

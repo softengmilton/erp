@@ -8,6 +8,7 @@
   const filterToggle = ref(false);
 
 const props = defineProps({
+    dateLabel: String,
     allCategory: Array,
     dailyReport: Object,
     total_product_sales: Number,
@@ -52,7 +53,7 @@ const selectedCategory = ref();
     category_id: 0,
   });
 
-  const x = computed
+  // const x = computed
   // Watcher: apply range on change
   watch(
   [selectedRange, selectedCategory], // ✅ array of sources
@@ -279,7 +280,7 @@ const aggregatedCategories = computed(() => {
           <span
             class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
           >
-            Augst
+            {{ props.dateLabel }}
           </span>
         </h2>
 

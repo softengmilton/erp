@@ -8,7 +8,7 @@
   const filterToggle = ref(false);
 
 const props = defineProps({
-  month: String,
+  dateLabel: String,
   dailyReport: Object,
   bestSellingCategory: Object,
   bestProfitableCategory: Object, 
@@ -220,7 +220,7 @@ const props = defineProps({
           <span
             class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
           >
-            {{ props.month }}
+            {{ props.dateLabel }}
           </span>
         </h2>
 
