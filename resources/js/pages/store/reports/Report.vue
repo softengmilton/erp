@@ -6,7 +6,9 @@ import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
-// Initialize Store Settings globally
+/**
+ * Action store settings
+ */
 initStoreSetting();
 
 const props = defineProps({
@@ -38,7 +40,6 @@ const filterData = ref({
   endDate: null,
 });
 
-// Watcher: apply range on change
 watch(
   selectedRange,
   (newRange) => {
@@ -55,10 +56,16 @@ function applyRange() {
   });
 }
 
-// Extract all unique category names across all days
+/**
+ * Extract unique categories from dailyReport for table headers
+ */
 const categories = Array.from(
   new Set(Object.values(props.dailyReport).flatMap((day) => Object.keys(day.categories)))
 );
+
+/**
+ * Export the table data to CSV
+ */
 
 const exportTableToCSV = () => {
   const table = document.querySelector("table");
@@ -92,7 +99,9 @@ const toggleFilter = () => {
   filterToggle.value = !filterToggle.value;
 };
 
-// Print Table with Store Info
+/**
+ * Print the report
+ */
 const printTable = () => {
   const printContent = tableRef.value.innerHTML;
   const printWindow = window.open("", "", "width=900,height=650");
@@ -410,4 +419,3 @@ const breadcrumbs = [
     </div>
   </AppLayout>
 </template>
-

@@ -6,14 +6,13 @@ import Widget from "@/components/Widget.vue";
 
 const props = defineProps({
   settings: Object,
-  financials: Object, // 👈 comes from controller
+  financials: Object,
   withdrawals: Array,
 });
 
-console.log("Settings Props:", props.settings);
-console.log("Financials Props:", props.financials);
-
-// ✅ Business Settings Form
+/**
+ * Business Settings Form
+ */
 const form = useForm({
   business_title: props.settings.business_title || "",
   business_email: props.settings.business_email || "",
@@ -27,7 +26,6 @@ const form = useForm({
   logo: null,
 });
 
-// ✅ Image preview refs
 const imagePreview = ref(props.settings.logo_url || null);
 const imageFile = ref(null);
 
@@ -57,6 +55,9 @@ function cancel() {
   removeImage();
 }
 
+/**
+ * Submit the business settings form
+ */
 function submitForm() {
   form.post("/store/settings", {
     preserveScroll: true,
@@ -66,7 +67,6 @@ function submitForm() {
   });
 }
 
-// ✅ Withdrawal form with useForm
 const withdrawalForm = useForm({
   amount: "",
   method: "bkash",
@@ -79,6 +79,9 @@ const withdrawalMethods = ref([
   { id: "bank", name: "Bank Transfer", icon: "🏦" },
 ]);
 
+/**
+ * Request a withdrawal
+ */
 function requestWithdrawal() {
   if (
     !withdrawalForm.amount ||
@@ -87,7 +90,6 @@ function requestWithdrawal() {
     alert("Invalid withdrawal amount");
     return;
   }
-
   withdrawalForm.post("/withdrawals/store", {
     preserveScroll: true,
     onSuccess: () => {
@@ -100,7 +102,6 @@ function requestWithdrawal() {
   });
 }
 
-// ✅ Breadcrumbs
 const breadcrumbs = [
   { title: "Dashboard", href: "/dashboard" },
   { title: "Settings", href: "/store/settings" },

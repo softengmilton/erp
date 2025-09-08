@@ -5,7 +5,10 @@ import { ref, watch, reactive, computed } from "vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
-// activate store settings
+
+/**
+ * Action Store Settings
+ */
 initStoreSetting();
 
 const filterToggle = ref(false);
@@ -55,10 +58,8 @@ const filterData = ref({
   category_id: 0,
 });
 
-// const x = computed
-// Watcher: apply range on change
 watch(
-  [selectedRange, selectedCategory], // ✅ array of sources
+  [selectedRange, selectedCategory],
   ([newRange, newCat]) => {
     const start = newRange[0] ? formatDate(newRange[0]) : null;
     const end = newRange[1] ? formatDate(newRange[1]) : start;
@@ -66,7 +67,7 @@ watch(
     filterData.value.startDate = start;
     filterData.value.endDate = end;
 
-    filterData.value.category_id = newCat; // ✅ set category_id
+    filterData.value.category_id = newCat;
     console.log(filterData.value.category_id);
     applyRange();
   },
@@ -77,9 +78,7 @@ function applyRange() {
   router.get("/store/products-reports", filterData.value, {
     preserveState: true,
     replace: true,
-
     onSuccess: (page) => {
-      // Update reactive props when Inertia responds
       reactiveReport.dailyReport = page.props.dailyReport;
       reactiveReport.total_product_sales = page.props.total_product_sales;
       reactiveReport.total_profit = page.props.total_profit;
@@ -99,13 +98,15 @@ const aggregatedCategories = computed(() => {
   );
 });
 
+/**
+ * Export table to CSV
+ */
+
 const exportTableToCSV = () => {
   const settings = StoreSetting.all.value;
   const table = document.querySelector("table");
   const rows = table.querySelectorAll("tr");
-
   const csv = [];
-
   // Add business info at the top
   csv.push([settings.business_title || "Store Name"]);
   csv.push([settings.address || ""]);
@@ -132,11 +133,12 @@ const exportTableToCSV = () => {
   link.click();
 };
 
+/**
+ * Print the table
+ */
 const printTable = () => {
-  const settings = StoreSetting.all.value; // reactive settings
+  const settings = StoreSetting.all.value;
   const clone = tableRef.value.cloneNode(true);
-
-  // Remove the report title in the cloned content
   const reportTitle = clone.querySelector("h2");
   if (reportTitle) reportTitle.remove();
 
@@ -169,7 +171,6 @@ const printTable = () => {
   printWindow.document.close();
   printWindow.print();
 };
-
 
 const toggleFilter = () => {
   filterToggle.value = !filterToggle.value;

@@ -11,8 +11,6 @@ const props = defineProps({
   order: Object,
 });
 
-console.log(StoreSetting.all.value);
-
 const breadcrumbs = [
   { title: "Dashboard", href: "/dashboard" },
   { title: "Orders", href: "/store/orders" },
@@ -59,8 +57,6 @@ const subtotal = computed(() => {
 const total = computed(() => {
   return subtotal.value - props.order.discount + props.order.adjustment;
 });
-
-// print receipt
 
 // Print invoice using store settings
 const printInvoice = () => {
