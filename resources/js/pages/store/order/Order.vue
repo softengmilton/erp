@@ -79,6 +79,7 @@ const getPaymentMethodIcon = (method) => {
 };
 
 const cancelOrder = (orderId) => {
+  // console.log(orderId);
     if (confirm('Are you sure you want to cancel this order?')) {
         router.delete(`/store/orders/${orderId}`, {
             preserveScroll: true,

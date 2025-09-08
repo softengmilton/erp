@@ -7,6 +7,8 @@ use App\Models\StoreOrder;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use DB;
+use Illuminate\Support\Facades\Redirect;
 
 class OrderController extends Controller
 {
@@ -167,25 +169,20 @@ public function update(Request $request, $id)
      */
     public function destroy(string $id)
     {
-        //
+        // Delete related stock movements first
+        DB::table('store_stock_movements')
+            ->where('source_data->order_id', $id)
+            ->delete();
+
+     
+        // Delete the order itself
+        DB::table('store_orders')
+            ->where('id', $id)
+            ->delete();
+
+        return Redirect::back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Order deleted successfully.',
+        ]);
     }
 }
-
-
-//   if ($order->due_amount == $request->due_amount) {
-
-//                 $order->update([
-//                     'payment_status' => 'paid',
-//                     'due_amount' => $request->due_amount,
-//                 ]);
-//             } else {
-//                 $order->update([
-//                     'due_amount' => $request->due_amount,
-//                 ]);
-//             }
-//             return redirect()->back()->with([
-//                 'toast' => [
-//                     'type' => 'success',
-//                     'message' => 'Payment updated successfully!'
-//                 ]
-//             ]);
