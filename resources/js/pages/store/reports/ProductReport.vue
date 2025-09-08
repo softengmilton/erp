@@ -6,44 +6,46 @@
   import "@vuepic/vue-datepicker/dist/main.css";
 
   const filterToggle = ref(false);
+  const tableRef = ref(null);
 
-const props = defineProps({
-    allCategory: Array,
-    dailyReport: Object,
-    total_product_sales: Number,
-    total_profit: Number,
-    bestSellingCategory: Object,        
-    bestProfitableCategory: Object,
-});
+  const props = defineProps({
+      dateLabel: String,
+      allCategory: Array,
+      dailyReport: Object,
+      total_product_sales: Number,
+      total_profit: Number,
+      bestSellingCategory: Object,        
+      bestProfitableCategory: Object,
+  });
 
-// Make reactive copies
-const reactiveReport = reactive({
-  dailyReport: props.dailyReport,
-  allCategory: props.allCategory,
-  total_product_sales: props.total_product_sales,
-  total_profit: props.total_profit,
-  bestSellingCategory: props.bestSellingCategory,
-  bestProfitableCategory: props.bestProfitableCategory,
-});
+  // Make reactive copies
+  const reactiveReport = reactive({
+    dailyReport: props.dailyReport,
+    allCategory: props.allCategory,
+    total_product_sales: props.total_product_sales,
+    total_profit: props.total_profit,
+    bestSellingCategory: props.bestSellingCategory,
+    bestProfitableCategory: props.bestProfitableCategory,
+  });
 
-// console.log(props.dailyReport);
+  // console.log(props.dailyReport);
 
 
-const selectedCategory = ref();
+  const selectedCategory = ref();
 
-  const today = new Date();
-  console.log(today);
+    const today = new Date();
+    console.log(today);
 
-  const selectedRange = ref([today, null]);
-  console.log(selectedRange);
+    const selectedRange = ref([today, null]);
+    console.log(selectedRange);
 
-  function formatDate(date) {
-    if (!date) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
+    function formatDate(date) {
+      if (!date) return null;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
 
   
   const filterData = ref({
@@ -52,10 +54,10 @@ const selectedCategory = ref();
     category_id: 0,
   });
 
-  const x = computed
+  // const x = computed
   // Watcher: apply range on change
   watch(
-  [selectedRange, selectedCategory], // ✅ array of sources
+    [selectedRange, selectedCategory], // ✅ array of sources
     ([newRange, newCat]) => {
     const start = newRange[0] ? formatDate(newRange[0]) : null;
     const end = newRange[1] ? formatDate(newRange[1]) : start;
@@ -66,9 +68,9 @@ const selectedCategory = ref();
     filterData.value.category_id = newCat; // ✅ set category_id
     console.log(filterData.value.category_id);
     applyRange();
-  },
-  { deep: true }
-);
+    },
+    { deep: true }
+  );
 
 
     function applyRange() {
@@ -87,15 +89,15 @@ const selectedCategory = ref();
     });
   }
 
-const aggregatedCategories = computed(() => {
-  return Array.from(
-    new Set(
-      Object.values(reactiveReport.dailyReport).flatMap(day =>
-        Object.keys(day.categories)
+  const aggregatedCategories = computed(() => {
+    return Array.from(
+      new Set(
+        Object.values(reactiveReport.dailyReport).flatMap(day =>
+          Object.keys(day.categories)
+        )
       )
-    )
-  );
-});
+    );
+  });
 
   const exportTableToCSV = () => {
     const table = document.querySelector("table");
@@ -135,6 +137,28 @@ const aggregatedCategories = computed(() => {
     link.click();
   };
 
+    const printTable = () => {
+    const printContent = tableRef.value.innerHTML;
+    const printWindow = window.open("", "", "width=900,height=650");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Summary Report</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            table { border-collapse: collapse; width: 100%; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+            th { background: #f4f4f4; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const  toggleFilter = () => {
     filterToggle.value = !filterToggle.value;
@@ -191,7 +215,6 @@ const aggregatedCategories = computed(() => {
           </p>
         </div>
 
-
         <!-- Best Seller Card -->
         <div class="rounded-xl border p-4 flex flex-col items-start">
           <div class="flex items-center gap-2">
@@ -211,13 +234,24 @@ const aggregatedCategories = computed(() => {
       <div class="flex flex-col gap-4">
         <!-- Buttons Row -->
         <div class="flex items-center justify-between gap-4">
-          <!-- Export Button -->
-          <button
-            @click="exportTableToCSV"
-            class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
-          >
-            📄 Export CSV
-          </button>
+          <!-- Export + Print Buttons Group -->
+          <div class="flex gap-2">
+            <!-- Export Button -->
+            <button
+              @click="exportTableToCSV"
+              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+            >
+              📄 Export CSV
+            </button>
+
+            <!-- Print Button -->
+            <button
+              @click="printTable"
+              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+            >
+              🖨 Print
+            </button>
+          </div>
 
           <!-- Filter Toggle Button -->
           <div class="flex justify-end">
@@ -231,7 +265,7 @@ const aggregatedCategories = computed(() => {
           </div>
         </div>
 
-        <!-- Filters Row (only shows when true) -->
+        <!-- Filters Row -->
         <div
           v-if="filterToggle"
           class="bg-gray-50 rounded-lg shadow p-4 transition-all duration-300"
@@ -250,140 +284,121 @@ const aggregatedCategories = computed(() => {
 
             <!-- Category Selector -->
             <div class="min-w-[200px]">
-              <!-- <label for="category" class="block text-gray-700 text-sm mb-1">Category</label> -->
               <select
                 id="category"
                 v-model="selectedCategory"
                 class="w-full border border-gray-300 rounded p-2"
               >
-                 <option
+                <option
                   v-for="category in reactiveReport.allCategory"
                   :key="category.id"
                   :value="category.id"
                 >
-                    {{ category.name }}
-                </option> 
+                  {{ category.name }}
+                </option>
               </select>
             </div>
           </div>
         </div>
       </div>
 
-
       <!-- Summary Report Table -->
-      <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
-        <h2
-          class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-        >
-          <span class="text-gray-800">Summary Report</span>
-          <span
-            class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
-          >
-            Augst
-          </span>
-        </h2>
+      <div ref="tableRef">
+        <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
+          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <span class="text-gray-800">Summary Report</span>
+            <span class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full">
+              {{ props.dateLabel }}
+            </span>
+          </h2>
 
-        <div class="overflow-x-auto border border-gray-300 shadow-sm">
-    <table class="min-w-full border-collapse text-sm font-mono">
-  <!-- Table Header -->
-  <thead class="bg-gray-100">
-    <tr>
-      <th
-        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-      >
-        Date
-      </th>
+          <div class="overflow-x-auto border border-gray-300 shadow-sm">
+            <table class="min-w-full border-collapse text-sm font-mono">
+              <!-- Table Header -->
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                    Date
+                  </th>
 
-      <!-- Sales Categories -->
-      <th
-        v-for="category in aggregatedCategories"
-        :key="category + '-sale-header'"
-        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-      >
-        {{ category }} Sale
-      </th>
+                  <!-- Sales Categories -->
+                  <th
+                    v-for="category in aggregatedCategories"
+                    :key="category + '-sale-header'"
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    {{ category }} Sale
+                  </th>
 
-      <th
-        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-      >
-        Total Sales
-      </th>
+                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                    Total Sales
+                  </th>
 
-      <!-- Cost Categories -->
-      <th
-        v-for="category in aggregatedCategories"
-        :key="category + '-cost-header'"
-        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-      >
-        {{ category }} Cost
-      </th>
+                  <!-- Cost Categories -->
+                  <th
+                    v-for="category in aggregatedCategories"
+                    :key="category + '-cost-header'"
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    {{ category }} Cost
+                  </th>
 
-      <th
-        class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-      >
-        Total Cost
-      </th>
-    </tr>
-  </thead>
+                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                    Total Cost
+                  </th>
+                </tr>
+              </thead>
 
-  <!-- Table Body -->
-  <tbody>
-    <!-- Rows when data exists -->
-    <tr
-      v-if="reactiveReport.dailyReport && Object.keys(reactiveReport.dailyReport).length"
-      v-for="(day, date) in reactiveReport.dailyReport"
-      :key="date"
-      class="hover:bg-gray-50"
-    >
-      <!-- Date -->
-      <td
-        class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
-      >
-        {{ date }}
-      </td>
+              <!-- Table Body -->
+              <tbody>
+                <tr
+                  v-if="reactiveReport.dailyReport && Object.keys(reactiveReport.dailyReport).length"
+                  v-for="(day, date) in reactiveReport.dailyReport"
+                  :key="date"
+                  class="hover:bg-gray-50"
+                >
+                  <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
+                    {{ date }}
+                  </td>
 
-      <!-- Sales per category -->
-      <td
-        v-for="category in aggregatedCategories"
-        :key="date + '-' + category + '-sale'"
-        class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
-      >
-        {{ day.categories[category]?.product_sales ?? 0 }}
-      </td>
+                  <!-- Sales per category -->
+                  <td
+                    v-for="category in aggregatedCategories"
+                    :key="date + '-' + category + '-sale'"
+                    class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+                  >
+                    {{ day.categories[category]?.product_sales ?? 0 }}
+                  </td>
 
-      <!-- Total Sales -->
-      <td
-        class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-      >
-        {{ day.total_sales }}
-      </td>
+                  <!-- Total Sales -->
+                  <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                    {{ day.total_sales }}
+                  </td>
 
-      <!-- Cost per category -->
-      <td
-        v-for="category in aggregatedCategories"
-        :key="date + '-' + category + '-cost'"
-        class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
-      >
-        {{ day.categories[category]?.product_cost ?? 0 }}
-      </td>
+                  <!-- Cost per category -->
+                  <td
+                    v-for="category in aggregatedCategories"
+                    :key="date + '-' + category + '-cost'"
+                    class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
+                  >
+                    {{ day.categories[category]?.product_cost ?? 0 }}
+                  </td>
 
-      <!-- Total Cost -->
-      <td
-        class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-      >
-        {{ day.total_cost }}
-      </td>
-    </tr>
+                  <!-- Total Cost -->
+                  <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                    {{ day.total_cost }}
+                  </td>
+                </tr>
 
-    <!-- No Data Row -->
-    <tr v-else>
-      <td colspan="100%" class="text-center py-4 text-gray-500">
-        No data found
-      </td>
-    </tr>
-  </tbody>
-</table>
-
+                <!-- No Data Row -->
+                <tr v-else>
+                  <td colspan="100%" class="text-center py-4 text-gray-500">
+                    No data found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

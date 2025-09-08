@@ -5,19 +5,19 @@
   import VueDatePicker from "@vuepic/vue-datepicker";
   import "@vuepic/vue-datepicker/dist/main.css";
 
-  const filterToggle = ref(false);
+  const props = defineProps({
+    dateLabel: String,
+    dailyReport: Object,
+    bestSellingCategory: Object,
+    bestProfitableCategory: Object, 
+    allCategorySales: Number,
+    allCategoryProfit: Number,
+  });
 
-const props = defineProps({
-  month: String,
-  dailyReport: Object,
-  bestSellingCategory: Object,
-  bestProfitableCategory: Object, 
-  allCategorySales: Number,
-  allCategoryProfit: Number,
-});
+  const filterToggle = ref(false);
+  const tableRef = ref(null);
 
   const today = new Date();
-  console.log(today);
 
   const selectedRange = ref([today, null]);
 
@@ -102,6 +102,29 @@ const props = defineProps({
     filterToggle.value = !filterToggle.value;
   };
 
+  const printTable = () => {
+    const printContent = tableRef.value.innerHTML;
+    const printWindow = window.open("", "", "width=900,height=650");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Summary Report</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            table { border-collapse: collapse; width: 100%; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+            th { background: #f4f4f4; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const breadcrumbs = [
     { title: "Dashboard", href: "/dashboard" },
     { title: "Reports", href: "/store/reports" },
@@ -171,13 +194,24 @@ const props = defineProps({
       <div class="flex flex-col gap-4">
         <!-- Buttons Row -->
         <div class="flex items-center justify-between gap-4">
-          <!-- Export Button -->
-          <button
-            @click="exportTableToCSV"
-            class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
-          >
-            📄 Export CSV
-          </button>
+          <!-- Export + Print Buttons Group -->
+          <div class="flex gap-2">
+            <!-- Export Button -->
+            <button
+              @click="exportTableToCSV"
+              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+            >
+              📄 Export CSV
+            </button>
+            
+            <!-- Print Button -->
+            <button
+              @click="printTable"
+              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-md shadow-sm"
+            >
+              🖨 Print
+            </button>
+          </div>
 
           <!-- Filter Toggle Button -->
           <div class="flex justify-end">
@@ -210,147 +244,160 @@ const props = defineProps({
         </div>
       </div>
 
-
-      <!-- Summary Report Table -->
-      <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
-        <h2
-          class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-        >
-          <span class="text-gray-800">Summary Report</span>
-          <span
-            class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
+      <div ref="tableRef">
+        <!-- Summary Report Table -->
+        <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
+          <h2
+            class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
           >
-            {{ props.month }}
-          </span>
-        </h2>
+            <span class="text-gray-800">Summary Report</span>
+            <span
+              class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
+            >
+              {{ props.dateLabel }}
+            </span>
+          </h2>
 
-        <div class="overflow-x-auto border border-gray-300 shadow-sm">
-          <table class="min-w-full border-collapse text-sm font-mono">
-            <!-- Table Header -->
-            <thead class="bg-gray-100">
-              <tr>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Date
-                </th>
+          <div class="overflow-x-auto border border-gray-300 shadow-sm">
+            <table class="min-w-full border-collapse text-sm font-mono">
+              <!-- Table Header -->
+              <thead class="bg-gray-100">
+                <tr>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Date
+                  </th>
 
-                <!-- Sales Categories -->
-                <th
-                  v-for="category in categories"
-                  :key="'sales-' + category"
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  {{ category }} Sale
-                </th>
+                  <!-- Sales Categories -->
+                  <th
+                    v-for="category in categories"
+                    :key="'sales-' + category"
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    {{ category }} Sale
+                  </th>
 
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Total Sales
-                </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Total Sales
+                  </th>
 
-                <!-- Cost Categories -->
-                <th
-                  v-for="category in categories"
-                  :key="'cost-' + category"
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  {{ category }} Cost
-                </th>
+                  <!-- Cost Categories -->
+                  <th
+                    v-for="category in categories"
+                    :key="'cost-' + category"
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    {{ category }} Cost
+                  </th>
 
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Total Cost
-                </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Total Cost
+                  </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Expense
+                  </th>
 
-                <!-- Payment Columns -->
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Cash
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Bkash
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Nagad
-                </th>
-                <th
-                  class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                >
-                  Due
-                </th>
-              </tr>
-            </thead>
+                  <!-- Payment Columns -->
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Cash
+                  </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Bkash
+                  </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Nagad
+                  </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Due
+                  </th>
+                </tr>
+              </thead>
 
-            <!-- Table Body -->
-            <tbody>
-              <tr
-                v-for="(dayReport, date) in props.dailyReport"
-                :key="date"
-                class="hover:bg-gray-50"
-              >
-                <!-- Date -->
-                <td
-                  class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
+              <!-- Table Body -->
+              <tbody>
+                <tr
+                  v-for="(dayReport, date) in props.dailyReport"
+                  :key="date"
+                  class="hover:bg-gray-50"
                 >
-                  {{ date }}
-                </td>
+                  <!-- Date -->
+                  <td
+                    class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
+                  >
+                    {{ date }}
+                  </td>
 
-                <!-- Sales per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'sales-data-' + category"
-                  class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
-                >
-                  {{ dayReport.categories[category]?.category_sales ?? 0 }}
-                </td>
+                  <!-- Sales per category -->
+                  <td
+                    v-for="category in categories"
+                    :key="'sales-data-' + category"
+                    class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+                  >
+                    {{ dayReport.categories[category]?.category_sales ?? 0 }}
+                  </td>
 
-                <!-- Total Sales -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                  {{ dayReport.total_sales ?? 0 }}
-                </td>
+                  <!-- Total Sales -->
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
+                    {{ dayReport.total_sales ?? 0 }}
+                  </td>
 
-                <!-- Cost per category -->
-                <td
-                  v-for="category in categories"
-                  :key="'cost-data-' + category"
-                  class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
-                >
-                  {{ dayReport.categories[category]?.category_unit_cost ?? 0 }}
-                </td>
+                  <!-- Cost per category -->
+                  <td
+                    v-for="category in categories"
+                    :key="'cost-data-' + category"
+                    class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
+                  >
+                    {{ dayReport.categories[category]?.category_unit_cost ?? 0 }}
+                  </td>
 
-                <!-- Total Cost -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                  {{ dayReport.total_cost ?? 0 }}
-                </td>
+                  <!-- Total Cost -->
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
+                    {{ dayReport.total_cost ?? 0 }}
+                  </td>
 
-                <!-- Payment Columns -->
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ dayReport.payments.cash ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ dayReport.payments.bkash ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ dayReport.payments.nagad ?? 0 }}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                  {{ dayReport.payments.due ?? 0 }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <!-- Expenses -->
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
+                    {{ dayReport.total_expense ?? 0 }}
+                  </td>
+
+                  <!-- Payment Columns -->
+                  <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+                    {{ dayReport.payments.cash ?? 0 }}
+                  </td>
+                  <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+                    {{ dayReport.payments.bkash ?? 0 }}
+                  </td>
+                  <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+                    {{ dayReport.payments.nagad ?? 0 }}
+                  </td>
+                  <td class="border border-gray-300 px-4 py-2 text-right bg-white">
+                    {{ dayReport.payments.due ?? 0 }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

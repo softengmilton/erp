@@ -15,12 +15,30 @@ class ReportController extends Controller
      */
     /**
      * Display summary report.
+     * 
+     *
      */
 public function index(Request $request)
 {
-    // date range
-    $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
-    $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
+    // Date range
+    $startDate = $request->startDate 
+        ? Carbon::parse($request->startDate)->startOfDay() 
+        : now()->startOfMonth()->startOfDay();
+    $endDate = $request->endDate 
+        ? Carbon::parse($request->endDate)->endOfDay() 
+        : now()->endOfMonth()->endOfDay();
+
+    if ($request->startDate && $request->endDate) {
+        $start = Carbon::parse($request->startDate);
+        $end   = Carbon::parse($request->endDate);
+        $dateLabel = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
+    } elseif ($request->startDate) {
+        $dateLabel = Carbon::parse($request->startDate)->format('M j, Y');
+    } elseif ($request->endDate) {
+        $dateLabel = Carbon::parse($request->endDate)->format('M j, Y');
+    } else {
+        $dateLabel = now()->format('F Y');
+    }
 
     \Log::info('Fetching report', ['startDate' => $startDate, 'endDate' => $endDate]);
 
@@ -60,8 +78,19 @@ public function index(Request $request)
         ->get()
         ->keyBy('order_date');
 
-    
-    // daily report & calculate totals 
+    // Expenses (exclude "asset")
+    $expenses = DB::table('store_expenses')
+        ->join('store_expense_types', 'store_expenses.store_expense_type_id', '=', 'store_expense_types.id')
+        ->where('store_expense_types.name', '<>', 'asset')
+        ->select(
+            DB::raw('DATE(store_expenses.created_at) as order_date'),
+            DB::raw('SUM(store_expenses.amount) as expense_amount')
+        )
+        ->groupBy('order_date')
+        ->get()
+        ->keyBy('order_date'); // keyBy date for easy lookup
+
+    // Daily report & totals
     $dailyReport = [];
     $categoryTotals = [];
     $categoryProfits = [];
@@ -85,6 +114,7 @@ public function index(Request $request)
                     'bank' => 0,
                     'due' => 0,
                 ],
+                'total_expense' => 0, // new
             ];
         }
 
@@ -132,6 +162,7 @@ public function index(Request $request)
                     'bank' => 0,
                     'due' => 0,
                 ],
+                'total_expense' => 0,
             ];
         }
 
@@ -145,22 +176,45 @@ public function index(Request $request)
         ];
     }
 
-    
-    // best-selling category
+    // Inject expenses
+    foreach ($expenses as $date => $row) {
+        if (!isset($dailyReport[$date])) {
+            $dailyReport[$date] = [
+                'categories' => [],
+                'total_sales' => 0,
+                'total_cost' => 0,
+                'best_category' => null,
+                'payments' => [
+                    'cash' => 0,
+                    'bkash' => 0,
+                    'nagad' => 0,
+                    'card' => 0,
+                    'bank' => 0,
+                    'due' => 0,
+                ],
+                'total_expense' => 0,
+            ];
+        }
+
+        $dailyReport[$date]['total_expense'] = $row->expense_amount;
+    }
+
+    // Best-selling category
     $bestSellingCategory = !empty($categoryTotals) ? [
         'name' => collect($categoryTotals)->sortDesc()->keys()->first(),
         'sales' => collect($categoryTotals)->sortDesc()->first()
     ] : null;
 
-    
-    // best profitable category
+    // Best profitable category
     $bestProfitableCategory = !empty($categoryProfits) ? [
         'name' => collect($categoryProfits)->sortDesc()->keys()->first(),
         'profit' => collect($categoryProfits)->sortDesc()->first()
     ] : null;
 
+
+    // dd($dailyReport);
     return Inertia::render('store/reports/Report', [
-        'month' => now()->format('F Y'),
+        'dateLabel' => $dateLabel,
         'dailyReport' => $dailyReport,
         'bestSellingCategory' => $bestSellingCategory,
         'bestProfitableCategory' => $bestProfitableCategory,
@@ -168,6 +222,7 @@ public function index(Request $request)
         'allCategoryProfit' => $allCategoryProfit,
     ]);
 }
+
 
 
 
