@@ -298,6 +298,11 @@
                   >
                     Total Cost
                   </th>
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
+                    Expense
+                  </th>
 
                   <!-- Payment Columns -->
                   <th
@@ -367,6 +372,13 @@
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
                     {{ dayReport.total_cost ?? 0 }}
+                  </td>
+
+                  <!-- Expenses -->
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
+                    {{ dayReport.total_expense ?? 0 }}
                   </td>
 
                   <!-- Payment Columns -->
