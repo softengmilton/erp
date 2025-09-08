@@ -1,176 +1,185 @@
 <script setup>
-  import AppLayout from "@/layouts/AppLayout.vue";
-  import { Head, router } from "@inertiajs/vue3";
-  import { ref, watch, reactive, computed } from "vue";
-  import VueDatePicker from "@vuepic/vue-datepicker";
-  import "@vuepic/vue-datepicker/dist/main.css";
+import AppLayout from "@/layouts/AppLayout.vue";
+import { Head, router } from "@inertiajs/vue3";
+import { ref, watch, reactive, computed } from "vue";
+import VueDatePicker from "@vuepic/vue-datepicker";
+import "@vuepic/vue-datepicker/dist/main.css";
+import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+// activate store settings
+initStoreSetting();
 
-  const filterToggle = ref(false);
-  const tableRef = ref(null);
+const filterToggle = ref(false);
+const tableRef = ref(null);
 
-  const props = defineProps({
-      dateLabel: String,
-      allCategory: Array,
-      dailyReport: Object,
-      total_product_sales: Number,
-      total_profit: Number,
-      bestSellingCategory: Object,        
-      bestProfitableCategory: Object,
-  });
+const props = defineProps({
+  dateLabel: String,
+  allCategory: Array,
+  dailyReport: Object,
+  total_product_sales: Number,
+  total_profit: Number,
+  bestSellingCategory: Object,
+  bestProfitableCategory: Object,
+});
 
-  // Make reactive copies
-  const reactiveReport = reactive({
-    dailyReport: props.dailyReport,
-    allCategory: props.allCategory,
-    total_product_sales: props.total_product_sales,
-    total_profit: props.total_profit,
-    bestSellingCategory: props.bestSellingCategory,
-    bestProfitableCategory: props.bestProfitableCategory,
-  });
+// Make reactive copies
+const reactiveReport = reactive({
+  dailyReport: props.dailyReport,
+  allCategory: props.allCategory,
+  total_product_sales: props.total_product_sales,
+  total_profit: props.total_profit,
+  bestSellingCategory: props.bestSellingCategory,
+  bestProfitableCategory: props.bestProfitableCategory,
+});
 
-  // console.log(props.dailyReport);
+// console.log(props.dailyReport);
 
+const selectedCategory = ref();
 
-  const selectedCategory = ref();
+const today = new Date();
+console.log(today);
 
-    const today = new Date();
-    console.log(today);
+const selectedRange = ref([today, null]);
+console.log(selectedRange);
 
-    const selectedRange = ref([today, null]);
-    console.log(selectedRange);
+function formatDate(date) {
+  if (!date) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
-    function formatDate(date) {
-      if (!date) return null;
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    }
+const filterData = ref({
+  startDate: today ? formatDate(today) : null,
+  endDate: null,
+  category_id: 0,
+});
 
-  
-  const filterData = ref({
-    startDate: today ? formatDate(today) : null,
-    endDate: null,
-    category_id: 0,
-  });
-
-  // const x = computed
-  // Watcher: apply range on change
-  watch(
-    [selectedRange, selectedCategory], // ✅ array of sources
-    ([newRange, newCat]) => {
+// const x = computed
+// Watcher: apply range on change
+watch(
+  [selectedRange, selectedCategory], // ✅ array of sources
+  ([newRange, newCat]) => {
     const start = newRange[0] ? formatDate(newRange[0]) : null;
     const end = newRange[1] ? formatDate(newRange[1]) : start;
-    
+
     filterData.value.startDate = start;
     filterData.value.endDate = end;
 
     filterData.value.category_id = newCat; // ✅ set category_id
     console.log(filterData.value.category_id);
     applyRange();
+  },
+  { deep: true }
+);
+
+function applyRange() {
+  router.get("/store/products-reports", filterData.value, {
+    preserveState: true,
+    replace: true,
+
+    onSuccess: (page) => {
+      // Update reactive props when Inertia responds
+      reactiveReport.dailyReport = page.props.dailyReport;
+      reactiveReport.total_product_sales = page.props.total_product_sales;
+      reactiveReport.total_profit = page.props.total_profit;
+      reactiveReport.bestSellingCategory = page.props.bestSellingCategory;
+      reactiveReport.bestProfitableCategory = page.props.bestProfitableCategory;
     },
-    { deep: true }
-  );
+  });
+}
 
-
-    function applyRange() {
-    router.get("/store/products-reports", filterData.value,{
-      preserveState: true,
-      replace: true,
-
-      onSuccess: (page) => {
-        // Update reactive props when Inertia responds
-        reactiveReport.dailyReport = page.props.dailyReport;
-        reactiveReport.total_product_sales = page.props.total_product_sales;
-        reactiveReport.total_profit = page.props.total_profit;
-        reactiveReport.bestSellingCategory = page.props.bestSellingCategory;
-        reactiveReport.bestProfitableCategory = page.props.bestProfitableCategory;
-      },
-    });
-  }
-
-  const aggregatedCategories = computed(() => {
-    return Array.from(
-      new Set(
-        Object.values(reactiveReport.dailyReport).flatMap(day =>
-          Object.keys(day.categories)
-        )
+const aggregatedCategories = computed(() => {
+  return Array.from(
+    new Set(
+      Object.values(reactiveReport.dailyReport).flatMap((day) =>
+        Object.keys(day.categories)
       )
-    );
+    )
+  );
+});
+
+const exportTableToCSV = () => {
+  const settings = StoreSetting.all.value;
+  const table = document.querySelector("table");
+  const rows = table.querySelectorAll("tr");
+
+  const csv = [];
+
+  // Add business info at the top
+  csv.push([settings.business_title || "Store Name"]);
+  csv.push([settings.address || ""]);
+  csv.push([`Report Date: ${new Date().toLocaleDateString()}`]);
+  csv.push([]); // empty row
+
+  rows.forEach((row) => {
+    const cols = row.querySelectorAll("th, td");
+    const rowData = [];
+    cols.forEach((col) => {
+      const data = col.innerText.trim().replace(/"/g, '""');
+      rowData.push(`"${data}"`);
+    });
+    csv.push(rowData.join(","));
   });
 
-  const exportTableToCSV = () => {
-    const table = document.querySelector("table");
-    const rows = table.querySelectorAll("tr");
+  const csvFile = new Blob([csv.join("\n")], {
+    type: "text/csv;charset=utf-8;",
+  });
 
-    const csv = [];
-    rows.forEach((row, rowIndex) => {
-      const cols = row.querySelectorAll("th, td");
-      const rowData = [];
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(csvFile);
+  link.download = `summary_report_${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+};
 
-      cols.forEach((col, colIndex) => {
-        const rawData = col.innerText.trim();
+const printTable = () => {
+  const settings = StoreSetting.all.value; // reactive settings
+  const clone = tableRef.value.cloneNode(true);
 
-        // Fix date column (first column, skip header)
-        const data =
-          colIndex === 0 && rowIndex > 0 && !isNaN(new Date(rawData))
-            ? new Date(rawData).toISOString().split("T")[0]
-            : rawData;
+  // Remove the report title in the cloned content
+  const reportTitle = clone.querySelector("h2");
+  if (reportTitle) reportTitle.remove();
 
-        // Escape quotes
-        const safeData = data.replace(/"/g, '""');
-        rowData.push(`"${safeData}"`);
-      });
+  const printWindow = window.open("", "", "width=900,height=650");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${settings.business_title || "Store Report"}</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; }
+          h1, h2 { margin: 0; padding: 0; }
+          table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+          th { background: #f4f4f4; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .logo { max-height: 60px; margin-bottom: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          ${settings.logo ? `<img src="${settings.logo}" class="logo" />` : ""}
+          <h1>${settings.business_title || "Store Name"}</h1>
+          <p>${settings.address || ""}</p>
+          <p>Report Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+        ${clone.innerHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+};
 
-      csv.push(rowData.join(","));
-    });
 
-    const csvFile = new Blob([csv.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
+const toggleFilter = () => {
+  filterToggle.value = !filterToggle.value;
+};
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(csvFile);
-    link.download = `summary_report_${new Date()
-      .toISOString()
-      .split("T")[0]}.csv`;
-    link.click();
-  };
-
-    const printTable = () => {
-    const printContent = tableRef.value.innerHTML;
-    const printWindow = window.open("", "", "width=900,height=650");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Summary Report</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { border-collapse: collapse; width: 100%; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-            th { background: #f4f4f4; }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const  toggleFilter = () => {
-    filterToggle.value = !filterToggle.value;
-  }
-
-    const breadcrumbs = [
-      { title: "Dashboard", href: "/dashboard" },
-      { title: "Prodcuts Reports", href: "/store/products-reports" },
-  ];
-
+const breadcrumbs = [
+  { title: "Dashboard", href: "/dashboard" },
+  { title: "Prodcuts Reports", href: "/store/products-reports" },
+];
 </script>
-
 
 <template>
   <Head title="Reports" />
@@ -208,7 +217,7 @@
             <h3 class="text-sm font-medium text-gray-500">Top Profit Category</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ reactiveReport.bestProfitableCategory?.name || 'No data' }}
+            {{ reactiveReport.bestProfitableCategory?.name || "No data" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
             Profit: BDT {{ reactiveReport.bestProfitableCategory?.profit || 0 }}
@@ -305,9 +314,13 @@
       <!-- Summary Report Table -->
       <div ref="tableRef">
         <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <span class="text-gray-800">Summary Report</span>
-            <span class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full">
+          <h2
+            class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
+          >
+            <span class="text-gray-800"> Report </span>
+            <span
+              class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
+            >
               {{ props.dateLabel }}
             </span>
           </h2>
@@ -317,7 +330,9 @@
               <!-- Table Header -->
               <thead class="bg-gray-100">
                 <tr>
-                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
                     Date
                   </th>
 
@@ -330,7 +345,9 @@
                     {{ category }} Sale
                   </th>
 
-                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
                     Total Sales
                   </th>
 
@@ -343,7 +360,9 @@
                     {{ category }} Cost
                   </th>
 
-                  <th class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">
+                  <th
+                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
+                  >
                     Total Cost
                   </th>
                 </tr>
@@ -352,12 +371,17 @@
               <!-- Table Body -->
               <tbody>
                 <tr
-                  v-if="reactiveReport.dailyReport && Object.keys(reactiveReport.dailyReport).length"
+                  v-if="
+                    reactiveReport.dailyReport &&
+                    Object.keys(reactiveReport.dailyReport).length
+                  "
                   v-for="(day, date) in reactiveReport.dailyReport"
                   :key="date"
                   class="hover:bg-gray-50"
                 >
-                  <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
+                  <td
+                    class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
+                  >
                     {{ date }}
                   </td>
 
@@ -371,7 +395,9 @@
                   </td>
 
                   <!-- Total Sales -->
-                  <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
                     {{ day.total_sales }}
                   </td>
 
@@ -385,7 +411,9 @@
                   </td>
 
                   <!-- Total Cost -->
-                  <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                  <td
+                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
+                  >
                     {{ day.total_cost }}
                   </td>
                 </tr>
