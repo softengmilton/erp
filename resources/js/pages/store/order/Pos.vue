@@ -3,7 +3,10 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import { Head, router } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
 import { formatCurrency } from "@/utils/helper";
+import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
+// Initialize store settings
+initStoreSetting();
 // ======================
 // 1. Props
 // ======================
@@ -98,7 +101,7 @@ watch(selectedStock, (newStockNumber) => {
     {
       preserveState: true,
       preserveScroll: true,
-      only: ["stock","productTypes"],
+      only: ["stock", "productTypes"],
     }
   );
 });
@@ -178,11 +181,15 @@ function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
 //
+
 function printInvoice() {
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open("", "_blank");
 
   const now = new Date();
   const dateTime = now.toLocaleString();
+
+  // Get store settings
+  const settings = StoreSetting.all.value;
 
   let invoiceHTML = `
     <!DOCTYPE html>
@@ -190,53 +197,45 @@ function printInvoice() {
     <head>
       <title>Invoice</title>
       <style>
-        body {
-          font-family: 'Courier New', Courier, monospace;
-          margin: 0;
-          padding: 20px;
-          font-size: 14px;
-          color: #333;
-        }
-        .invoice {
-          max-width: 500px;
-          margin: 0 auto;
-          border: 1px solid #ccc;
-          padding: 20px;
-          box-sizing: border-box;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          background: #fff;
-        }
+        body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; font-size: 14px; color: #333; }
+        .invoice { max-width: 500px; margin: 0 auto; border: 1px solid #ccc; padding: 20px; box-sizing: border-box; background: #fff; }
         .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 22px; letter-spacing: 2px; font-weight: bold; color: #222; }
-        .info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
-        .info > div { margin-bottom: 10px; font-size: 13px; }
-
+        .header h1 { margin: 0; font-size: 22px; font-weight: bold; }
+        .store-info { font-size: 12px; margin-bottom: 10px; }
+        .info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; font-size: 13px; }
         .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
         .table th, .table td { border: 1px solid #ccc; padding: 8px 10px; }
-        .table th { background-color: #f9f9f9; text-align: center; font-weight: 600; color: #444; }
-        .table td { background: #fff; }
-        .table tr:hover td { background-color: #fdfdfd; }
-
-        .totals { margin-top: 20px; width: 100%; }
+        .table th { background-color: #f9f9f9; text-align: center; font-weight: 600; }
         .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; font-size: 13px; }
         .totals-table td { padding: 8px 10px; border: 1px solid #ccc; }
         .totals-table td:first-child { font-weight: bold; background: #f9f9f9; width: 50%; }
-
         .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
       </style>
     </head>
     <body>
       <div class="invoice">
-        <div class="header">
-          <h1>INVOICE</h1>
-          <p>Date: ${dateTime}</p>
-        </div>
+<div class="header">
+            <h1>${settings.business_title || "Store Name"}</h1>
+            <p>${settings.address || ""}</p>
+            <p>${settings.business_email || ""} | ${settings.phone || ""}</p>
+            <p>Date: ${dateTime}</p>
+          </div>
 
         <div class="info">
           <div>
-            <strong>Customer:</strong> ${selectedCustomer.value?.name || 'Walking Customer'}<br>
-            ${selectedCustomer.value?.phone ? `<strong>Phone:</strong> ${selectedCustomer.value.phone}<br>` : ''}
-            ${selectedCustomer.value?.email ? `<strong>Email:</strong> ${selectedCustomer.value.email}` : ''}
+            <strong>Customer:</strong> ${
+              selectedCustomer.value?.name || "Walking Customer"
+            }<br>
+            ${
+              selectedCustomer.value?.phone
+                ? `<strong>Phone:</strong> ${selectedCustomer.value.phone}<br>`
+                : ""
+            }
+            ${
+              selectedCustomer.value?.email
+                ? `<strong>Email:</strong> ${selectedCustomer.value.email}`
+                : ""
+            }
           </div>
           <div>
             <strong>Invoice #:</strong> INV-${new Date().getTime()}<br>
@@ -256,7 +255,7 @@ function printInvoice() {
           <tbody>
   `;
 
-  cartItems.value.forEach(item => {
+  cartItems.value.forEach((item) => {
     invoiceHTML += `
       <tr>
         <td>${item.product.name}</td>
@@ -277,18 +276,24 @@ function printInvoice() {
               <td>Subtotal:</td>
               <td>${formatCurrency(cartNetTotal.value)}</td>
             </tr>
-            ${discountPercentage.value > 0 ? `
+            ${
+              discountPercentage.value > 0
+                ? `
             <tr>
               <td>Discount (${discountPercentage.value}%):</td>
               <td>-${formatCurrency(cartDiscount.value)}</td>
-            </tr>
-            ` : ''}
-            ${adjustmentAmount.value != 0 ? `
+            </tr>`
+                : ""
+            }
+            ${
+              adjustmentAmount.value != 0
+                ? `
             <tr>
               <td>Adjustment:</td>
               <td>${formatCurrency(adjustmentAmount.value)}</td>
-            </tr>
-            ` : ''}
+            </tr>`
+                : ""
+            }
             <tr>
               <td>Total:</td>
               <td>${formatCurrency(cartTotal.value)}</td>
@@ -303,7 +308,9 @@ function printInvoice() {
             </tr>
             <tr>
               <td>Payment Method:</td>
-              <td>${paymentMethods.find(p => p.id === selectedPaymentMethod.value).name}</td>
+              <td>${
+                paymentMethods.find((p) => p.id === selectedPaymentMethod.value).name
+              }</td>
             </tr>
           </table>
         </div>
@@ -319,14 +326,13 @@ function printInvoice() {
   printWindow.document.write(invoiceHTML);
   printWindow.document.close();
 
-  printWindow.onload = function() {
+  printWindow.onload = function () {
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
     }, 500);
   };
 }
-
 //
 
 function submitOrder() {
