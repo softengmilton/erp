@@ -6,40 +6,55 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\StoreSetting;
-use Illuminate\Support\Facades\redirect;
-use DB;
+use App\Models\Withdrawl;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redirect;
 
 class SettingsController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display business settings and financial balances.
      */
     public function index()
     {
+        // Get settings as key => value
         $settings = StoreSetting::pluck('value', 'key')->toArray();
 
+        if (!empty($settings['logo'])) {
+            // If you store in storage/app/public
+            $settings['logo_url'] = asset('storage/' . $settings['logo']);
+        } else {
+            $settings['logo_url'] = null;
+        }
+        // Cash/Bkash balances & withdrawals (from StoreSetting model methods)
+        $financials = [
+            'currentCash'        => StoreSetting::currentCashBalance(),
+            'bkashBalance'       => StoreSetting::currentBkashBalance(),
+            'totalBalance'       => StoreSetting::totalBalance(),
+            'totalWithdrawn'     => StoreSetting::totalWithdrawals(),
+            'availableBalance'   => StoreSetting::availableBalance(),
+            'dueBalance'         => StoreSetting::dueBalance(),
+        ];
+        $withdrawals = Withdrawl::where('reference', 'store')
+            ->latest()
+            ->take(10) // only last 10
+            ->get();
         return Inertia::render('store/settings/Settings', [
-            'settings' => $settings
+            'settings'   => $settings,
+            'financials' => $financials,
+            'withdrawals' => $withdrawals,
         ]);
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Store or update settings.
      */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-
     public function store(Request $request)
     {
-        // dd($request->all());
-        DB::beginTransaction(); 
-        try{
+        DB::beginTransaction();
+
+        try {
             $data = $request->validate([
                 'business_title'      => 'nullable|string|max:255',
                 'business_email'      => 'nullable|email',
@@ -55,58 +70,55 @@ class SettingsController extends Controller
 
             foreach ($data as $key => $value) {
                 if ($key === 'logo' && $request->hasFile('logo')) {
-                    $path = $request->file('logo')->store('logos', 'public'); // store logo
-                    StoreSetting::set('logo', $path); // save path as setting
+                    $path = $request->file('logo')->store('logos', 'public');
+                    StoreSetting::set('logo', $path);
                 } else {
                     StoreSetting::set($key, $value);
                 }
             }
 
-            DB::commit(); 
+            DB::commit();
 
             return Redirect::back()->with('toast', [
                 'type' => 'success',
-                'message' => 'Settings saved successfully!'
+                'message' => 'Settings saved successfully!',
             ]);
-        } catch (Exception $e) {
-            DB::rollback();
+        } catch (\Exception $e) {
+            DB::rollBack();
+
             return Redirect::back()->with('toast', [
                 'type' => 'error',
                 'message' => $e->getMessage(),
             ]);
         }
-
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function withdrawals(Request $request)
     {
-        //
-    }
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+            'method' => ['required', 'in:cash,bkash,bank'],
+            'account' => ['nullable', 'string', 'max:255'],
+        ]);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        // Check available balance
+        $availableBalance = \App\Models\StoreSetting::availableBalance();
+        if ($data['amount'] > $availableBalance) {
+            return back()->withErrors(['amount' => 'Withdrawal amount exceeds available balance.']);
+        }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+        Withdrawl::create([
+            'user_id'  => Auth::id(),
+            'amount'   => $data['amount'],
+            'method'   => $data['method'],
+            'reference' => 'store',
+            'status'   => 'approved',
+            'remarks'  => $data['account'] ?? null,
+        ]);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return Redirect::back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Withdrawal request submitted successfully!',
+        ]);
     }
 }

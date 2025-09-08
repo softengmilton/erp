@@ -310,12 +310,11 @@ class StockController extends Controller
      */
     public function adjustStockProduct(Request $request, $stock, $product)
     {
-        // dd($request->all());
         try {
             $validated = $request->validate([
-                'type' => 'required|in:damage,return',
+                'type'     => 'required|in:damage,return',
                 'quantity' => 'required|integer|min:1',
-                'note' => 'required|string|max:255',
+                'note'     => 'required|string|max:255',
             ]);
 
             $stockItem = StoreStockItem::query()
@@ -323,44 +322,69 @@ class StockController extends Controller
                 ->where('store_product_id', $product)
                 ->firstOrFail();
 
-            // Validate available quantity
+            // ✅ Validate available quantity
             if ($validated['quantity'] > $stockItem->quantity) {
                 return Redirect::back()->with('toast', [
-                    'type' => 'error',
+                    'type'    => 'error',
                     'message' => 'Adjustment quantity cannot exceed available stock.',
                 ]);
             }
 
             $oldMeta = $stockItem->adjustment_data ? json_decode($stockItem->adjustment_data, true) : [];
 
-            // Create new adjustment record
+            // 📌 Build adjustment record
             $newAdjustment = [
-                'type' => $validated['type'],
-                'quantity' => $validated['quantity'],
-                'note' => $validated['note'],
+                'type'        => $validated['type'],
+                'quantity'    => $validated['quantity'],
+                'note'        => $validated['note'],
                 'adjusted_at' => now()->toDateTimeString(),
                 'adjusted_by' => auth()->id(),
             ];
 
-            // Update stock item
+            // Always reduce quantity
+            $stockItem->quantity -= $validated['quantity'];
+
+            if ($validated['type'] === 'return') {
+                // Landed unit cost (for proportional cost reduction)
+                $landedUnitCost = $stockItem->unit_cost
+                    + ($stockItem->shipping_cost_unit ?? 0)
+                    + ($stockItem->other_fees_unit ?? 0);
+
+                $costAdjustment = $landedUnitCost * $validated['quantity'];
+
+                // ✅ Reduce total cost of item
+                $stockItem->total_cost = max($stockItem->total_cost - $costAdjustment, 0);
+            }
+            // If damage → only quantity reduced (no cost changes)
+
+            // 🔒 Save item
             $stockItem->update([
-                'quantity' => $validated['type'] === 'damage'
-                    ? $stockItem->quantity - $validated['quantity']
-                    : $stockItem->quantity + $validated['quantity'],
+                'quantity'        => $stockItem->quantity,
+                'total_cost'      => $stockItem->total_cost,
                 'adjustment_data' => json_encode([
                     'current' => $newAdjustment,
                     'history' => array_merge([$oldMeta['current'] ?? []], $oldMeta['history'] ?? []),
                 ]),
             ]);
 
+            // 🔄 Recalculate parent stock only for return
+            if ($validated['type'] === 'return') {
+                $stockModel = $stockItem->storeStock;
+                $recalculatedTotal = $stockModel->storeStockItems()->sum('total_cost');
+
+                $stockModel->update([
+                    'total_cost' => $recalculatedTotal,
+                ]);
+            }
+
             return Redirect::back()->with('toast', [
-                'type' => 'success',
+                'type'    => 'success',
                 'message' => 'Stock adjustment recorded successfully.',
                 'summary' => ucfirst($validated['type']) . ' of ' . $validated['quantity'] . ' items',
             ]);
         } catch (Exception $e) {
             return Redirect::back()->with('toast', [
-                'type' => 'error',
+                'type'    => 'error',
                 'message' => 'Failed to adjust stock: ' . $e->getMessage(),
             ]);
         }
