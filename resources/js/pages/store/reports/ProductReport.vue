@@ -24,6 +24,8 @@ const props = defineProps({
   bestProfitableCategory: Object,
 });
 
+console.log(props.dailyReport)
+
 // Make reactive copies
 const reactiveReport = reactive({
   dailyReport: props.dailyReport,
@@ -390,9 +392,9 @@ const breadcrumbs = [
                   <td
                     v-for="category in aggregatedCategories"
                     :key="date + '-' + category + '-sale'"
-                    class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
+                    class="border border-gray-300 px-2 py-2 text-left text-green-700 bg-white"
                   >
-                    {{ day.categories[category]?.product_sales ?? 0 }}
+                   Price {{ day.categories[category]?.product_sale_price ?? 0 }} x Qty {{ day.categories[category]?.product_quantity ?? 0}} = {{ day.categories[category]?.product_sales ?? 0 }}
                   </td>
 
                   <!-- Total Sales -->

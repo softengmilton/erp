@@ -66,6 +66,8 @@ class ProductReportController extends Controller
                 'store_products.name',
                 'store_products.id',
                 
+                DB::raw('SUM(store_order_items.quantity) as product_quantity'),
+                DB::raw('MAX(store_order_items.sale_price) as product_sale_price'),
                 DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
                 DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as product_cost'),
 
@@ -96,6 +98,8 @@ class ProductReportController extends Controller
 
                 $dailyReport[$item->order_date]['categories'][$item->name] = [
                     'order_date' => $item->order_date,
+                    'product_quantity' => $item->product_quantity,
+                    'product_sale_price' => $item->product_sale_price,
                     'product_sales' => $item->product_sales,
                     'product_cost' => $item->product_cost,
                 ];
