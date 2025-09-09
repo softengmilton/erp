@@ -91,7 +91,7 @@ function goToPage(url) {
                                 </td>
 
                                 <td class="min-w-[120px] border border-gray-300 bg-white px-7 py-2 text-left font-medium whitespace-nowrap">
-                                    {{ humanTime(item.movement_date) }}
+                                    {{ item.movement_date }}
                                 </td>
                             </tr>
                         </tbody>
