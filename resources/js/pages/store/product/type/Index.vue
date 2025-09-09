@@ -4,7 +4,7 @@ import { router, Head } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 
 const props = defineProps({
-  productTypes: Object, // Laravel paginator object
+  productTypes: Object,
 });
 
 const breadcrumbs = [{ title: "Product Types", href: "/store/product-types" }];

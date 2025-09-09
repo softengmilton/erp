@@ -1,134 +1,151 @@
 <script setup>
-  import AppLayout from "@/layouts/AppLayout.vue";
-  import { Head, router } from "@inertiajs/vue3";
-  import { ref, watch } from "vue";
-  import VueDatePicker from "@vuepic/vue-datepicker";
-  import "@vuepic/vue-datepicker/dist/main.css";
+import AppLayout from "@/layouts/AppLayout.vue";
+import { Head, router } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
+import VueDatePicker from "@vuepic/vue-datepicker";
+import "@vuepic/vue-datepicker/dist/main.css";
+import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
-  const props = defineProps({
-    dateLabel: String,
-    dailyReport: Object,
-    bestSellingCategory: Object,
-    bestProfitableCategory: Object, 
-    allCategorySales: Number,
-    allCategoryProfit: Number,
+/**
+ * Action store settings
+ */
+initStoreSetting();
+
+const props = defineProps({
+  dateLabel: String,
+  dailyReport: Object,
+  bestSellingCategory: Object,
+  bestProfitableCategory: Object,
+  allCategorySales: Number,
+  allCategoryProfit: Number,
+});
+
+const filterToggle = ref(false);
+const tableRef = ref(null);
+
+const today = new Date();
+
+const selectedRange = ref([today, null]);
+
+function formatDate(date) {
+  if (!date) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const filterData = ref({
+  startDate: today ? formatDate(today) : null,
+  endDate: null,
+});
+
+watch(
+  selectedRange,
+  (newRange) => {
+    filterData.value.startDate = newRange[0] ? formatDate(newRange[0]) : null;
+    filterData.value.endDate = newRange[1] ? formatDate(newRange[1]) : null;
+    applyRange();
+  },
+  { deep: true }
+);
+
+function applyRange() {
+  router.get("/store/reports", filterData.value, {
+    preserveState: true,
+  });
+}
+
+/**
+ * Extract unique categories from dailyReport for table headers
+ */
+const categories = Array.from(
+  new Set(Object.values(props.dailyReport).flatMap((day) => Object.keys(day.categories)))
+);
+
+/**
+ * Export the table data to CSV
+ */
+
+const exportTableToCSV = () => {
+  const table = document.querySelector("table");
+  const rows = table.querySelectorAll("tr");
+  const csv = [];
+
+  rows.forEach((row, rowIndex) => {
+    const cols = row.querySelectorAll("th, td");
+    const rowData = [];
+
+    cols.forEach((col, colIndex) => {
+      const rawData = col.innerText.trim();
+      const data =
+        colIndex === 0 && rowIndex > 0 && !isNaN(new Date(rawData))
+          ? new Date(rawData).toISOString().split("T")[0]
+          : rawData;
+      rowData.push(`"${data.replace(/"/g, '""')}"`);
+    });
+
+    csv.push(rowData.join(","));
   });
 
-  const filterToggle = ref(false);
-  const tableRef = ref(null);
+  const csvFile = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(csvFile);
+  link.download = `summary_report_${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+};
 
-  const today = new Date();
+const toggleFilter = () => {
+  filterToggle.value = !filterToggle.value;
+};
 
-  const selectedRange = ref([today, null]);
+/**
+ * Print the report
+ */
+const printTable = () => {
+  const printContent = tableRef.value.innerHTML;
+  const printWindow = window.open("", "", "width=900,height=650");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Summary Report - ${StoreSetting.get("business_title")}</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; }
+          h1, h2, h3 { margin: 0; padding: 0; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header img { max-height: 80px; margin-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; font-size: 12px; }
+          th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+          th { background: #f4f4f4; }
+           .report-title { display: none; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          ${
+            StoreSetting.get("logo")
+              ? `<img src="${StoreSetting.get("logo")}" alt="Logo" />`
+              : ""
+          }
+          <h1>${StoreSetting.get("business_title") || "Business"}</h1>
+          <p>${StoreSetting.get("address") || ""}</p>
+          <p>${StoreSetting.get("business_email") || ""} | ${
+    StoreSetting.get("phone") || ""
+  }</p>
+          <h3>Summary Report: ${props.dateLabel}</h3>
+        </div>
+        ${printContent}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+};
 
-  function formatDate(date) {
-    if (!date) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  const filterData = ref({
-    startDate: today ? formatDate(today) : null,
-    endDate: null,
-  });
-
-  // Watcher: apply range on change
-  watch(
-    selectedRange,
-    (newRange) => {
-      filterData.value.startDate = newRange[0] ? formatDate(newRange[0]) : null;
-      filterData.value.endDate = newRange[1] ? formatDate(newRange[1]) : null;
-      applyRange();
-    },
-    { deep: true }
-  );
-
-  function applyRange() {
-    router.get("/store/reports", filterData.value, {
-      preserveState: true,
-    });
-  }
-
-  // Extract all unique category names across all days
-  const categories = Array.from(
-    new Set(
-      Object.values(props.dailyReport).flatMap((day) =>
-        Object.keys(day.categories)
-      )
-    )
-  );
-
-  const exportTableToCSV = () => {
-    const table = document.querySelector("table");
-    const rows = table.querySelectorAll("tr");
-
-    const csv = [];
-    rows.forEach((row, rowIndex) => {
-      const cols = row.querySelectorAll("th, td");
-      const rowData = [];
-
-      cols.forEach((col, colIndex) => {
-        const rawData = col.innerText.trim();
-
-        // Fix date column (first column, skip header)
-        const data =
-          colIndex === 0 && rowIndex > 0 && !isNaN(new Date(rawData))
-            ? new Date(rawData).toISOString().split("T")[0]
-            : rawData;
-
-        // Escape quotes
-        const safeData = data.replace(/"/g, '""');
-        rowData.push(`"${safeData}"`);
-      });
-
-      csv.push(rowData.join(","));
-    });
-
-    const csvFile = new Blob([csv.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(csvFile);
-    link.download = `summary_report_${new Date()
-      .toISOString()
-      .split("T")[0]}.csv`;
-    link.click();
-  };
-
-  const toggleFilter = () => {
-    filterToggle.value = !filterToggle.value;
-  };
-
-  const printTable = () => {
-    const printContent = tableRef.value.innerHTML;
-    const printWindow = window.open("", "", "width=900,height=650");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Summary Report</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            table { border-collapse: collapse; width: 100%; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-            th { background: #f4f4f4; }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const breadcrumbs = [
-    { title: "Dashboard", href: "/dashboard" },
-    { title: "Reports", href: "/store/reports" },
-  ];
+const breadcrumbs = [
+  { title: "Dashboard", href: "/dashboard" },
+  { title: "Reports", href: "/store/reports" },
+];
 </script>
 
 <template>
@@ -167,13 +184,12 @@
             <h3 class="text-sm font-medium text-gray-500">Top Profit Category</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ props.bestProfitableCategory?.name || 'No data' }}
+            {{ props.bestProfitableCategory?.name || "No data" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
             Profit: BDT {{ props.bestProfitableCategory?.profit || 0 }}
           </p>
         </div>
-
 
         <!-- Best Seller Card -->
         <div class="rounded-xl border p-4 flex flex-col items-start">
@@ -203,7 +219,7 @@
             >
               📄 Export CSV
             </button>
-            
+
             <!-- Print Button -->
             <button
               @click="printTable"
@@ -248,9 +264,9 @@
         <!-- Summary Report Table -->
         <div class="bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
           <h2
-            class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3"
+            class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3 report-title"
           >
-            <span class="text-gray-800">Summary Report</span>
+            <span class="text-gray-800">Report</span>
             <span
               class="ml-2 px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-full"
             >

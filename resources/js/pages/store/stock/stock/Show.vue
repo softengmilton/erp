@@ -54,7 +54,9 @@ const openAdjustmentModal = (item) => {
   showAdjustmentModal.value = true;
 };
 
-// Submit handlers
+/**
+ * Submit the price update form
+ */
 const submitPriceUpdate = () => {
    router.post(`/store/stocks/${props.stock.id}/update-price/${selectedItem.value.store_product_id}`, {
        sale_price: priceForm.value.sale_price,
@@ -63,6 +65,9 @@ const submitPriceUpdate = () => {
   showPriceModal.value = false;
 };
 
+/**
+ * Submit the stock adjustment form
+ */
 const submitAdjustment = () => {
   router.post(
     `/store/stocks/${props.stock.id}/adjustment/${selectedItem.value.store_product_id}`,

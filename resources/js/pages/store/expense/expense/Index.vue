@@ -201,7 +201,7 @@ function goToPage(url) {
             </tr>
             <tr v-if="filteredExpenses.length === 0">
               <td colspan="7" class="px-6 py-6 text-center text-gray-500">
-                No products found.
+                No expense found.
               </td>
             </tr>
           </tbody>
@@ -242,14 +242,14 @@ function goToPage(url) {
           </h2>
           <!-- First Row - Image and Name -->
           <div class="flex flex-col md:flex-row gap-6 mb-6">
-            <!-- Name and Product Type -->
+            <!-- Name and Expense Type -->
             <div class="w-full md:w-2/3 space-y-4">
               <label class="block">
                 <span class="block text-sm font-medium text-gray-700 mb-1">Name *</span>
                 <input
                   v-model="selectedExpense.name"
                   type="text"
-                  placeholder="Product name"
+                  placeholder="Expense name"
                   required
                   class="mt-1 block w-full rounded-md shadow-sm border border-gray-300 px-3 py-2 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                 />
@@ -324,7 +324,6 @@ function goToPage(url) {
             >
               Save
             </button>
-            <button @click="consoleLog">console log</button>
           </div>
         </div>
         <!--  Modal content ends here -->

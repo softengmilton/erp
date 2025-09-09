@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\StoreSetting;
 use Inertia\Inertia;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,9 +22,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Inertia::share([
-            'toast' => function () {
-                return session()->get('toast');
-            },
+            'toast' => fn() => session()->get('toast'),
+
+            // Lazy-loaded settings (only when rendering an Inertia response)
+            'storeSettings' => fn() => StoreSetting::pluck('value', 'key'),
         ]);
     }
 }

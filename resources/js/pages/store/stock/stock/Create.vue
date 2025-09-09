@@ -12,7 +12,6 @@ import Label from "@/components/ui/label/Label.vue";
 import Input from "@/components/ui/input/Input.vue";
 import InputError from "@/components/InputError.vue";
 
-// Props
 const props = defineProps({
   products: {
     type: Array,
@@ -24,13 +23,11 @@ const props = defineProps({
   },
 });
 
-// Breadcrumbs
 const breadcrumbs = [
   { title: "Stocks", href: "/store/stocks" },
   { title: "Add Stock", href: "/store/stocks/create" },
 ];
 
-// Form
 const form = useForm({
   invoice_number: props.invoice_number,
   supplier_name: "",
@@ -42,13 +39,11 @@ const form = useForm({
   note: "",
 });
 
-// Refs
 const searchQuery = ref("");
 const showProductDropdown = ref(false);
 const imagePreview = ref(null);
 const editor = ClassicEditor;
 
-// Computed
 const filteredProducts = computed(() =>
   !searchQuery.value
     ? []
@@ -74,7 +69,6 @@ const grandTotal = computed(
     parseFloat(form.other_fees || 0)
 );
 
-// Watchers
 watch([subtotal, () => form.shipping_cost, () => form.other_fees, totalQuantity], () => {
   form.total_cost = grandTotal.value;
   distributeAdditionalCosts();
