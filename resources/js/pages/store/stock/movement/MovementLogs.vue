@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import { ref, onMounted, onUnmounted } from "vue";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -52,6 +52,12 @@ const breadcrumbs = [
   { title: "Dashboard", href: "/dashboard" },
   { title: "Movement", href: "/store/stock-lists" },
 ];
+
+function goToPage(url) {
+    console.log(url);
+  if (!url) return;
+  router.get(url);
+}
 </script>
 
 
@@ -116,58 +122,61 @@ const breadcrumbs = [
             <!-- Table Body -->
             <tbody>
               <tr
-              v-for="item in props.stock_movements"
-              :key="item"
+                v-for="item in props.stock_movements.data"
+                :key="item.id"
                 class="hover:bg-gray-50"
               >
-                <!-- Date -->
-                <td
-                  class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
-                >
+                <!-- Table rows remain unchanged -->
+                <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
                   {{ item.invoice_number }}
                 </td>
 
                 <td class="border border-gray-300 px-4 py-2 bg-white text-center">
-                    <img 
-                        :src="item.media_name 
-                            ? `/storage/${item.media_path}/${item.media_name}` 
-                            : '/assets/default/default_product.png'" 
-                        alt="Product Image" 
-                        class="w-16 h-16 object-cover mx-auto"
-                    />
+                  <img 
+                    :src="item.media_name 
+                      ? `/storage/${item.media_path}/${item.media_name}` 
+                      : '/assets/default/default_product.png'" 
+                    alt="Product Image" 
+                    class="w-16 h-16 object-cover mx-auto"
+                  />
                 </td>
 
-
-                <!-- Total Sales -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                   {{ item.product_name }}
+                <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                  {{ item.product_name }}
                 </td>
 
-                <!-- Cost per category -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
-                >
-                   {{ item.quantity }}
+                <td class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white">
+                  {{ item.quantity }}
                 </td>
 
-                <!-- Total Cost -->
-                <td
-                  class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                >
-                     {{ item.source_type }}
+                <td class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50">
+                  {{ item.source_type }}
                 </td>
 
-                <td
-                  class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
-                >
+                <td class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]">
                   {{ humanTime(item.movement_date) }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        <!-- Pagination -->
+        <nav class="mt-6 flex justify-center space-x-2" aria-label="Pagination">
+          <button
+            v-for="link in props.stock_movements.links"
+            :key="link.label"
+            :disabled="!link.url"
+            @click.prevent="goToPage(link.url)"
+            class="px-4 py-2 border rounded-md text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200"
+            :class="{
+              'bg-blue-50 border-blue-500 text-blue-600': link.active,
+            }"
+            v-html="link.label"
+            aria-current="page"
+          ></button>
+        </nav>
+
       </div>
     </div>
   </AppLayout>

@@ -32,7 +32,7 @@ class MovementLogsController extends Controller
                 'media.path as media_path'
             )
             ->orderBy('movement_date', 'desc')
-            ->get();
+            ->paginate(10);
 
             // dd($stock_movements);
 
