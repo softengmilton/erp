@@ -86,6 +86,10 @@ const mainNavItems: NavItem[] = [
             title: 'Products Reports',
             href: '/store/products-reports',
           },
+          {
+            title: 'Stock Reports',
+            href: '/store/stock-reports',
+          },
         ],
       },
       {
