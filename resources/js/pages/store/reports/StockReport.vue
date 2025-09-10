@@ -6,10 +6,58 @@ import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 
 
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 const filterToggle = ref(false);
 const props = defineProps({
   allCategory: Array,
+  stockReport: Object,
 });
+
+console.log(props.allCategory);
+
+
+const selectedCategory = ref();
+const selectedMonth = ref();
+
+
+const filterData = ref({
+  category_id: 0,
+  month: 0,
+});
+
+watch(
+  [selectedCategory, selectedMonth],
+  ([newCat, new_month]) => {
+    filterData.value.category_id = newCat;
+    filterData.value.month = new_month;
+    console.log(filterData.value.category_id);
+    console.log(filterData.value.month);
+    applyRange();
+  },
+  { deep: true }
+);
+
+function applyRange() {
+  router.get("/store/stock-reports", filterData.value, {
+    preserveState: true,
+    replace: true,
+  });
+}
+
+const aggregatedCategories = computed(() => {
+  return Array.from(
+    new Set(
+      Object.values(props.stockReport).flatMap((day) =>
+        Object.keys(day.categories)
+      )
+    )
+  );
+});
+
+console.log(aggregatedCategories.value);
 
 const toggleFilter = () => {
   filterToggle.value = !filterToggle.value;
@@ -120,19 +168,26 @@ const breadcrumbs = [
           <div class="flex flex-wrap justify-between items-center gap-4">
             <!-- Date Picker -->
             <div class="min-w-[260px]">
-              <VueDatePicker
-                v-model="selectedRange"
-                range
-                multi-calendars
-                placeholder="Select date range"
-                class="w-full border rounded p-2"
-              />
+               <select
+                v-model="selectedMonth"
+                class="w-full border border-gray-300 rounded p-2"
+                >
+                <option value="">Select Month</option>
+                <option
+                  v-for="(monthName, index) in months"
+                  :key="index"
+                  :value="index + 1"
+                >
+                  {{ monthName }}
+                </option>
+              </select>
             </div>
 
             <!-- Category Selector -->
             <div class="min-w-[200px]">
               <select
                 id="category"
+                v-model="selectedCategory"
                 class="w-full border border-gray-300 rounded p-2"
               >
                 <option
@@ -167,84 +222,27 @@ const breadcrumbs = [
               <!-- Table Header -->
               <thead class="bg-gray-100">
                 <tr>
+                    <!-- Sales Categories -->
                   <th
+                    v-for="category in aggregatedCategories"
+                    :key="category + '-sale-header'"
                     class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
                   >
-                    Date
+                    {{ category }} 
                   </th>
 
-                  <!-- Sales Categories -->
-                  <th
-                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                  >
-                     Sale
-                  </th>
-
-                  <th
-                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                  >
-                    Total Sales
-                  </th>
-
-                  <!-- Cost Categories -->
-                  <th
-                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                  >
-                     Cost
-                  </th>
-
-                  <th
-                    class="sticky top-0 border border-gray-300 px-4 py-2 text-center font-medium text-gray-700 bg-gray-100"
-                  >
-                    Total Cost
-                  </th>
                 </tr>
               </thead>
 
               <!-- Table Body -->
               <tbody>
-                <tr
-                  class="hover:bg-gray-50"
-                >
+                <tr class="hover:bg-gray-50">
                   <td
-                    class="border border-gray-300 px-7 py-2 text-left font-medium bg-white whitespace-nowrap min-w-[120px]"
-                  >
-                   
-                  </td>
-
-                  <!-- Sales per category -->
-                  <td
-                    class="border border-gray-300 px-2 py-2 text-left text-green-700 bg-white"
-                  >
-                  pp
-                </td>
-
-                  <!-- Total Sales -->
-                  <td
-                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                  >
-                   g
-                  </td>
-
-                  <!-- Cost per category -->
-                  <td
+                    v-for="(data, category) in props.stockReport[1].categories"
+                    :key="category"
                     class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
                   >
-                    ss
-                  </td>
-
-                  <!-- Total Cost -->
-                  <td
-                    class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
-                  >
-                    ss
-                  </td>
-                </tr>
-
-                <!-- No Data Row -->
-                <tr >
-                  <td colspan="100%" class="text-center py-4 text-gray-500">
-                    No data found
+                    {{ data.totalStockLeft }}
                   </td>
                 </tr>
               </tbody>
