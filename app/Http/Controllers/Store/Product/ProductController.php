@@ -51,7 +51,7 @@ class ProductController extends Controller
                 'unit' => 'required',
                 'low_stock_alert' => 'required',
                 'store_product_type_id' => 'required',
-                'image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+                'image' => 'required|image|mimes:jpg,jpeg,png',
             ]);
             DB::beginTransaction();
             $product = StoreProduct::create([

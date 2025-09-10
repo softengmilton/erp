@@ -17,37 +17,37 @@ class ProductReportController extends Controller
     public function index(Request $request)
     {
 
-    // Date range
-    $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
-    $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
-    if ($request->startDate && $request->endDate) {
-        $start = Carbon::parse($request->startDate);
-        $end   = Carbon::parse($request->endDate);
-        
-        $dateLabel = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
-    } elseif ($request->startDate) {
-        $dateLabel = Carbon::parse($request->startDate)->format('M j, Y');
-    } elseif ($request->endDate) {
-        $dateLabel = Carbon::parse($request->endDate)->format('M j, Y');
-    } else {
-        $dateLabel = now()->format('F Y');
-    }
+        // Date range
+        $startDate = $request->startDate ? Carbon::parse($request->startDate)->startOfDay() : now()->startOfMonth()->startOfDay();
+        $endDate   = $request->endDate   ? Carbon::parse($request->endDate)->endOfDay() : now()->endOfMonth()->endOfDay();
+        if ($request->startDate && $request->endDate) {
+            $start = Carbon::parse($request->startDate);
+            $end   = Carbon::parse($request->endDate);
 
-    // Pick product type from today's sales
-    $productTypeId = DB::table('store_order_items')
-        ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-        ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-        ->value('store_products.store_product_type_id');
+            $dateLabel = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
+        } elseif ($request->startDate) {
+            $dateLabel = Carbon::parse($request->startDate)->format('M j, Y');
+        } elseif ($request->endDate) {
+            $dateLabel = Carbon::parse($request->endDate)->format('M j, Y');
+        } else {
+            $dateLabel = now()->format('F Y');
+        }
 
-    //Category id
-    $category_id = $request->category_id ? $request->category_id : $productTypeId;
+        // Pick product type from today's sales
+        $productTypeId = DB::table('store_order_items')
+            ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
+            ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
+            ->value('store_products.store_product_type_id');
+
+        //Category id
+        $category_id = $request->category_id ? $request->category_id : $productTypeId;
 
 
 
         // Categories
         $allCategory = DB::table('store_product_types')
             ->select('store_product_types.id', 'store_product_types.name')->get();
-            // dd($allCategory);
+        // dd($allCategory);
 
         $dailyReport = [];
         $total_product_sales = 0;
@@ -57,37 +57,30 @@ class ProductReportController extends Controller
         $categoryProfits = [];
 
 
-        if($category_id){
+        if ($category_id) {
             $ProductReports = DB::table('store_order_items')
-            ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-            ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
-            ->select(
-                DB::raw('DATE(store_order_items.created_at) as order_date'),
-                'store_products.name',
-                'store_products.id',
-                
-                DB::raw('SUM(store_order_items.quantity) as product_quantity'),
-                DB::raw('MAX(store_order_items.sale_price) as product_sale_price'),
-                DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
-                DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as product_cost'),
+                ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
+                ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
+                ->select(
+                    DB::raw('DATE(store_order_items.created_at) as order_date'),
+                    'store_products.name',
+                    'store_products.id',
 
-            )
-            ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-            ->where('store_products.store_product_type_id', $category_id)
-            ->groupBy('order_date', 'store_products.name', 'store_products.id')
-            ->orderBy('order_date')
-            ->get();
+                    DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
+                    DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as product_cost'),
 
-            // dd($ProductReports);
-          
+                )
+                ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
+                ->where('store_products.store_product_type_id', $category_id)
+                ->groupBy('order_date', 'store_products.name', 'store_products.id')
+                ->orderBy('order_date')
+                ->paginate(30);
 
-            // $total_sales = 0;
-            // $total_cost = 0;
-
-            foreach($ProductReports as $item){
+       
+            foreach ($ProductReports as $item) {
 
                 // Initialize dailyReport for the date if not exists
-                  if(!isset($dailyReport[$item->order_date])){
+                if (!isset($dailyReport[$item->order_date])) {
                     $dailyReport[$item->order_date] = [
                         'categories' => [],
                         'total_sales' => 0,
@@ -115,12 +108,11 @@ class ProductReportController extends Controller
                 // Track category totals and profits
                 $categoryTotals[$item->name] = ($categoryTotals[$item->name] ?? 0) + $item->product_sales;
                 $categoryProfits[$item->name] = ($categoryProfits[$item->name] ?? 0) + ($item->product_sales - $item->product_cost);
-                // dd($profit);
 
             }
 
             // Total Profit
-                $total_profit = $total_product_sales - $total_product_cost;
+            $total_profit = $total_product_sales - $total_product_cost;
 
             // dd($dailyReport);
 
@@ -130,13 +122,12 @@ class ProductReportController extends Controller
                 'sales' => collect($categoryTotals)->sortDesc()->first()
             ] : null;
 
-            
+
             // best profitable category
             $bestProfitableCategory = !empty($categoryProfits) ? [
                 'name' => collect($categoryProfits)->sortDesc()->keys()->first(),
                 'profit' => collect($categoryProfits)->sortDesc()->first()
             ] : null;
-
         }
 
 

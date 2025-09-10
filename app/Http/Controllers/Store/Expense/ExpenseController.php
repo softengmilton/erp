@@ -50,7 +50,7 @@ class ExpenseController extends Controller
                 'name' => 'required|string|max:255|unique:store_expenses',
                 'description' => 'nullable|string',
                 'amount' => 'required|numeric',
-                'attachment' => 'required|max:2048',
+                'attachment' => 'max:2048',
             ]);
 
             DB::beginTransaction();
@@ -75,7 +75,6 @@ class ExpenseController extends Controller
             ]);
         } catch (Exception $e) {
             DB::rollback();
-            dd($e);
             return Redirect::back()->with('toast', [
                 'type' => 'error',
                 'message' => $e->getMessage(),
