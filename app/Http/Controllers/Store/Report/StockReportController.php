@@ -15,41 +15,31 @@ class StockReportController extends Controller
      */
     public function index(Request $request)
     {
-
-        $startDate =  now()->startOfMonth()->startOfDay();
-        $endDate   =  now()->endOfMonth()->endOfDay();
-        // dd($monthName);
-
-        $month = $request->month ? (int) $request->month : now()->month;
-
-        $year  = now()->year;
-
         // Categories
         $allCategory = DB::table('store_product_types')
-            ->select('store_product_types.id', 'store_product_types.name')->get();
+            ->select('id', 'name')
+            ->get();
 
-        // Pick product type from today's sales
+        // Pick product type from all-time sales
         $productTypeId = DB::table('store_order_items')
             ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-            ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
             ->value('store_products.store_product_type_id');
 
-        //Category id
+        // Category id
         $category_id = $request->category_id ? $request->category_id : $productTypeId;
 
+        // Stock items (all-time, no date filter)
         $stockItems = DB::table('store_stock_items')
             ->select('store_product_id', DB::raw('SUM(quantity) as total_items'))
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
             ->groupBy('store_product_id');
 
+        // Stock movements (all-time, no date filter)
         $stockMovements = DB::table('store_stock_movements')
             ->select('store_product_id', DB::raw('SUM(change_quantity) as total_movements'))
             ->where('source_type', 'sale')
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
             ->groupBy('store_product_id');
 
+        // Stock left = stock in − stock out (all-time)
         $stockLeft = DB::table('store_products')
             ->leftJoinSub($stockItems, 'si', function ($join) {
                 $join->on('store_products.id', '=', 'si.store_product_id');
@@ -73,12 +63,12 @@ class StockReportController extends Controller
             ];
         }
 
-        // dd($stockReport);
-        return Inertia::render('store/reports/StockReport',[
+        return Inertia::render('store/reports/StockReport', [
             'allCategory' => $allCategory,
             'stockReport' => $stockReport,
         ]);
     }
+
 
     /**
      * Show the form for creating a new resource.

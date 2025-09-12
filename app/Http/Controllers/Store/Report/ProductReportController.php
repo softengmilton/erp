@@ -66,15 +66,19 @@ class ProductReportController extends Controller
                     'store_products.name',
                     'store_products.id',
 
+                    DB::raw('SUM(store_order_items.quantity) as product_quantity'),
+                    DB::raw('MAX(store_order_items.sale_price) as product_sale_price'),
                     DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
                     DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as product_cost'),
 
                 )
                 ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-                ->where('store_products.store_product_type_id', $category_id)
+                ->where('store_products.store_product_type_id', $category_id, '')
                 ->groupBy('order_date', 'store_products.name', 'store_products.id')
                 ->orderBy('order_date')
                 ->paginate(30);
+
+                // dd($ProductReports);
 
        
             foreach ($ProductReports as $item) {
