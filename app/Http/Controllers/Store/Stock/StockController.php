@@ -112,7 +112,7 @@ class StockController extends Controller
 
             // Create stock items
             foreach ($validated['products'] as $productData) {
-                $stock->storeStockItems()->create([
+                $stockItem = $stock->storeStockItems()->create([
                     'store_product_id' => $productData['id'],
                     'quantity' => $productData['quantity'],
                     'unit_cost' => $productData['unit_cost'],
@@ -120,6 +120,21 @@ class StockController extends Controller
                     'other_fees_unit' => $productData['other_fees_per_unit'] ?? 0,
                     'total_cost' => $productData['total_cost'] ?? 0,
                     'sale_price' => $productData['sale_price'],
+                ]);
+
+
+                // Record stock movement as purchase
+                \App\Models\StoreStockMovement::create([
+                    'store_stock_id'   => $stockItem->store_stock_id,
+                    'store_product_id' => $stockItem->store_product_id,
+                    'change_quantity'  => $stockItem->quantity, // positive inflow
+                    'source_type'      => 'purchase',
+                    'source_data'      => json_encode([
+                        'unit_cost'   => $stockItem->unit_cost,
+                        'shipping'    => $stockItem->shipping_cost_unit ?? 0,
+                        'fees'        => $stockItem->other_fees_unit ?? 0,
+                    ]),
+
                 ]);
             }
             // Commit transaction

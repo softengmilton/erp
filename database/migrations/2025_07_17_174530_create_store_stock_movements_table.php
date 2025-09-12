@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('store_stock_id')->constrained('store_stocks')->cascadeOnDelete();
             $table->foreignId('store_product_id')->constrained('store_products')->cascadeOnDelete();
             $table->integer('change_quantity')->default(0);
-            $table->enum('source_type', ['purchase', 'sale', 'return'])->default('sale');
+            $table->enum('source_type', ['purchase', 'sale', 'return','adjustment'])->default('sale');
             $table->json('source_data')->nullable();
             $table->timestamps();
         });

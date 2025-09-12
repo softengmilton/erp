@@ -20,15 +20,15 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        // $this->call([
-        //     CustomerSeeder::class,
-        //     StoreProductType::class,
-        //     StoreProductSeeder::class,
-        //     StoreSettingSeeder::class,
-        //     StoreStockSeeder::class,
-        //     StoreExpenseTypeSeeder::class,
-        //     StoreExpenseSeeder::class,
-        //     StoreOrderSeeder::class,
-        // ]);
+        $this->call([
+            CustomerSeeder::class,
+            StoreProductType::class,
+            StoreProductSeeder::class,
+            StoreSettingSeeder::class,
+            StoreStockSeeder::class,
+            StoreExpenseTypeSeeder::class,
+            StoreExpenseSeeder::class,
+            StoreOrderSeeder::class,
+        ]);
     }
 }
