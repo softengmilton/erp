@@ -394,7 +394,7 @@ const breadcrumbs = [
                     :key="date + '-' + category + '-sale'"
                     class="border border-gray-300 px-2 py-2 text-left text-green-700 bg-white"
                   >
-                   Price {{ day.categories[category]?.product_sale_price ?? 0 }} x Qty {{ day.categories[category]?.product_quantity ?? 0}} = {{ day.categories[category]?.product_sales ?? 0 }}
+                   Qty {{ day.categories[category]?.product_quantity ?? 0}} | Sales {{ day.categories[category]?.product_sales ?? 0 }}
                   </td>
 
                   <!-- Total Sales -->

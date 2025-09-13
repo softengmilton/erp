@@ -58,25 +58,26 @@ class ProductReportController extends Controller
 
 
         if ($category_id) {
-            $ProductReports = DB::table('store_order_items')
-                ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-                ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
-                ->select(
-                    DB::raw('DATE(store_order_items.created_at) as order_date'),
-                    'store_products.name',
-                    'store_products.id',
+$ProductReports = DB::table('store_order_items')
+    ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
+    ->join('store_stock_items as stock', function($join) {
+        $join->on('store_order_items.store_stock_id', '=', 'stock.store_stock_id')
+             ->on('store_order_items.store_product_id', '=', 'stock.store_product_id');
+    })
+    ->select(
+        DB::raw('DATE(store_order_items.created_at) as order_date'),
+        'store_products.name',
+        'store_products.id',
+        DB::raw('SUM(store_order_items.quantity) as product_quantity'),
+        DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
+        DB::raw('SUM(store_order_items.quantity * (stock.unit_cost + stock.shipping_cost_unit + stock.other_fees_unit)) as product_cost')
+    )
+    ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
+    ->where('store_products.store_product_type_id', $category_id)
+    ->groupBy('order_date', 'store_products.name', 'store_products.id')
+    ->orderBy('order_date')
+    ->paginate(30);
 
-                    DB::raw('SUM(store_order_items.quantity) as product_quantity'),
-                    DB::raw('MAX(store_order_items.sale_price) as product_sale_price'),
-                    DB::raw('SUM(store_order_items.quantity * store_order_items.sale_price) as product_sales'),
-                    DB::raw('SUM(store_order_items.quantity * (store_stock_items.unit_cost + store_stock_items.shipping_cost_unit + store_stock_items.other_fees_unit) ) as product_cost'),
-
-                )
-                ->whereBetween('store_order_items.created_at', [$startDate, $endDate])
-                ->where('store_products.store_product_type_id', $category_id, '')
-                ->groupBy('order_date', 'store_products.name', 'store_products.id')
-                ->orderBy('order_date')
-                ->paginate(30);
 
                 // dd($ProductReports);
 
@@ -96,7 +97,7 @@ class ProductReportController extends Controller
                 $dailyReport[$item->order_date]['categories'][$item->name] = [
                     'order_date' => $item->order_date,
                     'product_quantity' => $item->product_quantity,
-                    'product_sale_price' => $item->product_sale_price,
+                    // 'product_sale_price' => $item->product_sale_price,
                     'product_sales' => $item->product_sales,
                     'product_cost' => $item->product_cost,
                 ];
