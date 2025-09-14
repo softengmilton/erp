@@ -59,5 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Settings
         Route::resource('settings', \App\Http\Controllers\Store\Settings\SettingsController::class);
+
+        Route::post('/adjusted-month', [\App\Http\Controllers\Store\Report\StockReportController::class, 'triggerAdjustments']);
     });
 });
