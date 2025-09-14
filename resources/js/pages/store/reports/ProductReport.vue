@@ -38,13 +38,13 @@ const reactiveReport = reactive({
 
 // console.log(props.dailyReport);
 
-const selectedCategory = ref();
+const selectedCategory = ref(null);
 
 const today = new Date();
-console.log(today);
+const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-const selectedRange = ref([today, null]);
-console.log(selectedRange);
+const selectedRange = ref([firstDay, lastDay]);
 
 function formatDate(date) {
   if (!date) return null;
@@ -54,30 +54,39 @@ function formatDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+// default: whole current month
 const filterData = ref({
-  startDate: today ? formatDate(today) : null,
-  endDate: null,
-  category_id: 0,
+  startDate: formatDate(firstDay),
+  endDate: formatDate(lastDay),
+  category_id: null,
 });
 
-watch(
-  [selectedRange, selectedCategory],
-  ([newRange, newCat]) => {
-    const start = newRange[0] ? formatDate(newRange[0]) : null;
-    const end = newRange[1] ? formatDate(newRange[1]) : start;
+// watch date range changes
+watch(selectedRange, (newRange) => {
+  const start = newRange[0] ? formatDate(newRange[0]) : null;
+  const end = newRange[1] ? formatDate(newRange[1]) : start;
 
-    filterData.value.startDate = start;
-    filterData.value.endDate = end;
+  filterData.value.startDate = start;
+  filterData.value.endDate = end;
 
-    filterData.value.category_id = newCat;
-    console.log(filterData.value.category_id);
-    applyRange();
-  },
-  { deep: true }
-);
+  applyRange();
+});
+
+// watch category changes
+watch(selectedCategory, (newCat) => {
+  filterData.value.category_id = newCat || null;
+  applyRange();
+});
 
 function applyRange() {
-  router.get("/store/products-reports", filterData.value, {
+  const payload = {};
+
+  // only send params that are not null
+  if (filterData.value.startDate) payload.startDate = filterData.value.startDate;
+  if (filterData.value.endDate) payload.endDate = filterData.value.endDate;
+  if (filterData.value.category_id) payload.category_id = filterData.value.category_id;
+
+  router.get("/store/products-reports", payload, {
     preserveState: true,
     replace: true,
     onSuccess: (page) => {
@@ -89,6 +98,7 @@ function applyRange() {
     },
   });
 }
+
 
 const aggregatedCategories = computed(() => {
   return Array.from(
