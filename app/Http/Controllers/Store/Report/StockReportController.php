@@ -22,18 +22,20 @@ class StockReportController extends Controller
      */
     public function index(Request $request)
     {
-        // Get filters from request (default = null)
-        $selectedMonth = $request->input('month');       // 1–12 (January=1)
-        $selectedCategory = $request->input('category_id'); // product id
+        // --- Default category (first category from order items)
+        $defaultCategoryId = StoreOrderItem::with('storeProduct')
+            ->orderBy('id')
+            ->first()?->storeProduct?->store_product_type_id ?? null;
 
+        // --- Get filters from request
+        $selectedMonth = $request->input('month');         
+        $selectedCategoryId = $request->input('category_id') ?? $defaultCategoryId;
+
+        // --- Query months
         $query = StoreOrderItem::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month");
 
-        // Apply filters
         if ($selectedMonth) {
             $query->whereMonth('created_at', $selectedMonth);
-        }
-        if ($selectedCategory) {
-            $query->where('store_product_id', $selectedCategory);
         }
 
         $months = $query->groupBy('month')->orderBy('month')->pluck('month');
@@ -43,42 +45,93 @@ class StockReportController extends Controller
         foreach ($months as $month) {
             $monthName = date("F", strtotime($month . "-01"));
 
-            $productQuery = StoreOrderItem::with('product')
-                ->select('store_product_id')
+            // --- Products for this month
+            $productQuery = StoreOrderItem::select('store_product_id')
                 ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
 
-            if ($selectedCategory) {
-                $productQuery->where('store_product_id', $selectedCategory);
+            if ($selectedCategoryId) {
+                // Filter order items by product category
+                $productQuery->whereHas('storeProduct', function ($q) use ($selectedCategoryId) {
+                    $q->where('store_product_type_id', $selectedCategoryId);
+                });
             }
 
             $products = $productQuery->groupBy('store_product_id')->pluck('store_product_id');
             $report[$monthName] = [];
 
+            // --- Month boundaries
+            $monthStart = \Carbon\Carbon::parse($month . '-01')->startOfMonth()->startOfDay();
+            $monthEnd   = \Carbon\Carbon::parse($month . '-01')->endOfMonth()->endOfDay();
+
             foreach ($products as $productId) {
                 $product = StoreProduct::find($productId);
                 $lines = [];
 
-                $orders = StoreOrderItem::where('store_product_id', $productId)
-                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month])
+                // --- Orders for this product
+                $orders = StoreOrderItem::with('storeStock')
+                    ->where('store_product_id', $productId)
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
+                    ->orderBy('created_at')
                     ->get();
 
-                foreach ($orders as $orderItem) {
-                    $stockNumber = $orderItem->storeStock->invoice_number ?? 'INV-XXXX';
-                    $saleTotal = $orderItem->sale_price * $orderItem->quantity;
-                    $stockBefore = $orderItem->quantity + $this->getRemainingStock($orderItem->store_stock_id, $productId);
-                    $stockAfter = $stockBefore - $orderItem->quantity;
+                // --- Group orders by invoice (store_stock_id)
+                $ordersByStock = $orders->groupBy('store_stock_id');
 
+                foreach ($ordersByStock as $stockId => $invoiceOrders) {
+                    $stockNumber = $invoiceOrders->first()->storeStock->invoice_number ?? 'INV-XXXX';
+
+                    // --- Load purchased qty for this stock
+                    $stockItem = StoreStockItem::where('store_stock_id', $stockId)
+                        ->where('store_product_id', $productId)
+                        ->first();
+
+                    $purchasedQty = $stockItem ? (int) $stockItem->quantity : 0;
+
+                    // --- Sales before this month
+                    $soldBefore = StoreOrderItem::where('store_stock_id', $stockId)
+                        ->where('store_product_id', $productId)
+                        ->where('created_at', '<', $monthStart)
+                        ->sum('quantity');
+
+                    $runningStock = max(0, $purchasedQty - $soldBefore);
+
+                    // --- Group sales by sale_price within this invoice
+                    $groupedSales = $invoiceOrders
+                        ->groupBy('sale_price')
+                        ->map(function ($rows, $price) {
+                            $qty = $rows->sum('quantity');
+                            return [
+                                'price' => $price,
+                                'quantity' => $qty,
+                                'total' => $price * $qty,
+                            ];
+                        });
+
+                    // --- Invoice header row
                     $lines[] = [
                         'stock_number' => $stockNumber,
-                        'sale' => "{$orderItem->sale_price}x{$orderItem->quantity} = \${$saleTotal}",
-                        'stock' => "{$stockBefore}-{$orderItem->quantity}={$stockAfter}",
+                        'sale' => '',
+                        'stock' => '',
                     ];
-                }
 
-                // Adjustment rows
+                    // --- Print grouped sales
+                    foreach ($groupedSales as $group) {
+                        $stockBefore = $runningStock;
+                        $stockAfter = $stockBefore - $group['quantity'];
+                        $runningStock = $stockAfter;
+
+                        $lines[] = [
+                            'stock_number' => '',
+                            'sale' => "{$group['price']}x{$group['quantity']} = \${$group['total']}",
+                            'stock' => "{$stockBefore}-{$group['quantity']}={$stockAfter}",
+                        ];
+                    }
+                } // end foreach invoice
+
+                // --- Adjustment rows (if any)
                 $adjustment = StoreStockMovement::where('store_product_id', $productId)
                     ->where('source_type', 'adjustment')
-                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month])
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
                     ->latest()
                     ->first();
 
@@ -90,7 +143,7 @@ class StockReportController extends Controller
                     ];
                 }
 
-                // Summary row
+                // --- Summary row
                 $totalSale = $orders->sum(fn($o) => $o->sale_price * $o->quantity);
                 $totalQty = $orders->sum('quantity');
                 $availableStock = $this->getAvailableStock($product);
@@ -105,7 +158,7 @@ class StockReportController extends Controller
             }
         }
 
-        // Categories for filter dropdown
+        // --- Categories for filter dropdown
         $allCategory = StoreProductType::select('id', 'name')->get();
 
         return Inertia::render('store/reports/StockReport', [
@@ -113,11 +166,10 @@ class StockReportController extends Controller
             'allCategory' => $allCategory,
             'filters' => [
                 'month' => $selectedMonth,
-                'category_id' => $selectedCategory,
+                'category_id' => $selectedCategoryId,
             ],
         ]);
     }
-
 
 
 
@@ -125,7 +177,7 @@ class StockReportController extends Controller
     {
         $purchased = StoreStockItem::where('store_product_id', $product->id)->sum('quantity');
         $moved = StoreStockMovement::where('store_product_id', $product->id)->sum('change_quantity');
-        return $purchased + $moved;
+        return $purchased - $moved;
     }
 
     private function getRemainingStock(int $stockId, int $productId): int
@@ -143,7 +195,6 @@ class StockReportController extends Controller
         return $item->quantity - $sold;
     }
 
-
     function triggerAdjustments()
     {
         $service = new StockAdjustmentService();
@@ -157,4 +208,5 @@ class StockReportController extends Controller
             }
         }
     }
+
 }

@@ -36,6 +36,11 @@ class StoreStock extends Model
         return $this->hasMany(StoreStockMovement::class);
     }
 
+    // One stock has many order items
+    public function storeOrderItems()
+    {
+        return $this->hasMany(StoreOrderItem::class);
+    }
     /*----------------------------------------
     * Accessors
     ----------------------------------------*/

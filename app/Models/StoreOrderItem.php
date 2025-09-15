@@ -14,8 +14,13 @@ class StoreOrderItem extends Model
         return $this->belongsTo(StoreProduct::class);
     }
 
-    public function storeStock()
+    public function storeStockItem()
     {
         return $this->belongsTo(StoreStockItem::class);
+    }
+    // One order item belongs to one stock
+    public function storeStock()
+    {
+        return $this->belongsTo(StoreStock::class);
     }
 }
