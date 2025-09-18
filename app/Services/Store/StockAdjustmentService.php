@@ -18,7 +18,6 @@ class StockAdjustmentService
         return DB::transaction(function () use ($product, $stock,) {
             // Calculate current stock
             $currentQuantity = $this->getAvailableStock($product, $stock);
-
             // Difference
             $changeQuantity = $currentQuantity;
 
@@ -48,13 +47,23 @@ class StockAdjustmentService
     public function getAvailableStock(StoreProduct $product, StoreStock $stock): int
     {
         // Sum from stock items (purchases)
-        $purchased = StoreStockItem::where('store_stock_id', $stock->id)->where('store_product_id', $product->id)->sum('quantity');
+        $purchased = StoreStockMovement::where('store_stock_id', $stock->id)
+            ->where('store_product_id', $product->id)
+            ->where('source_type', '=', 'purchase')
+            ->sum('change_quantity');
 
-        // Sum movements (sales, returns, adjustments)
+        // Sum movements excluding adjustments and purchases
         $moved = StoreStockMovement::where('store_stock_id', $stock->id)
             ->where('store_product_id', $product->id)
             ->where('source_type', '!=', 'adjustment')
+            ->where('source_type', '!=', 'purchase')
             ->sum('change_quantity');
+
+        // Sum total sales
+        // $sale = StoreStockMovement::where('store_stock_id', $stock->id)
+        //     ->where('store_product_id', $product->id)
+        //     ->where('source_type', '=', 'sale')
+        //     ->sum('change_quantity');
 
         return $purchased - $moved;
     }
