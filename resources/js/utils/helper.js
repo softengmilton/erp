@@ -14,20 +14,20 @@ const formatDate = (dateString) => {
 
 const formatCompactPriceHistory = (priceMeta) => {
   if (!priceMeta) return "No changes";
-  
+
   try {
     let history = [];
     let current = typeof priceMeta === 'string' ? JSON.parse(priceMeta) : priceMeta;
-    
+
     while (current) {
-      history.push(`modified ${current.new_price} x ${current.quantity_sold}x`);
-      current = current.previous ? 
-        (typeof current.previous === 'string' ? JSON.parse(current.previous) : current.previous) : 
+      history.push(`modified ${current.old_price} x ${current.quantity_sold}x`);
+      current = current.previous ?
+        (typeof current.previous === 'string' ? JSON.parse(current.previous) : current.previous) :
         null;
     }
-    
+
     return history.join('<br>');
-    
+
   } catch (e) {
     console.error("Error parsing price meta:", e);
     return "Invalid data";
@@ -35,8 +35,8 @@ const formatCompactPriceHistory = (priceMeta) => {
 }
    function formatAdjustmentHistory(adjustmentMeta) {
     // Parse if it's a JSON string
-    const data = typeof adjustmentMeta === 'string' 
-        ? JSON.parse(adjustmentMeta) 
+    const data = typeof adjustmentMeta === 'string'
+        ? JSON.parse(adjustmentMeta)
         : adjustmentMeta;
 
     if (!data) return "No adjustments";
@@ -57,8 +57,8 @@ const formatCompactPriceHistory = (priceMeta) => {
         });
     }
 
-    return lines.length > 0 
-        ? lines.join('<br>') 
+    return lines.length > 0
+        ? lines.join('<br>')
         : "No adjustments";
 }
 
