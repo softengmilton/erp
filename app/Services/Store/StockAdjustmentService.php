@@ -59,11 +59,6 @@ class StockAdjustmentService
             ->where('source_type', '!=', 'purchase')
             ->sum('change_quantity');
 
-        // Sum total sales
-        // $sale = StoreStockMovement::where('store_stock_id', $stock->id)
-        //     ->where('store_product_id', $product->id)
-        //     ->where('source_type', '=', 'sale')
-        //     ->sum('change_quantity');
 
         return $purchased - $moved;
     }
