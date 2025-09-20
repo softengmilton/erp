@@ -2,64 +2,28 @@
 
 namespace App\Services\Store;
 
-use App\Models\StoreProduct;
-use App\Models\StoreStock;
 use App\Models\StoreStockItem;
-use App\Models\StoreStockMovement;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class StockAdjustmentService
 {
     /**
-     * Adjust product stock (manual reset).
+     * Mark current month items as TRUE and all previous as FALSE
      */
-    public function adjustStock(StoreProduct $product, StoreStock $stock)
+    public static function adjustAllStockItems(): void
     {
-        return DB::transaction(function () use ($product, $stock,) {
-            // Calculate current stock
-            $currentQuantity = $this->getAvailableStock($product, $stock);
-            // Difference
-            $changeQuantity = $currentQuantity;
+        $currentMonthStart = Carbon::now()->startOfMonth();
 
-            // Save movement
-            StoreStockMovement::create([
-                'store_stock_id' => $stock->id, // manual adjustment has no purchase reference
-                'store_product_id' => $product->id,
-                'change_quantity' => $changeQuantity,
-                'source_type' => 'adjustment',
-                'source_data' => json_encode([
-                    'adjusted_at' => now(),
-                ]),
-            ]);
+        DB::transaction(function () use ($currentMonthStart) {
 
+            // 1. Set ALL previous months to false
+            StoreStockItem::where('created_at', '<', $currentMonthStart)
+                ->update(['adjustment' => true]);
 
-            return [
-                'product_id' => $product->id,
-                'old_quantity' => $currentQuantity,
-                'difference' => $changeQuantity,
-            ];
+            // 2. Set ONLY current month to false
+            StoreStockItem::where('created_at', '>=', $currentMonthStart)
+                ->update(['adjustment' => false]);
         });
-    }
-
-    /**
-     * Calculate available stock for a product
-     */
-    public function getAvailableStock(StoreProduct $product, StoreStock $stock): int
-    {
-        // Sum from stock items (purchases)
-        $purchased = StoreStockMovement::where('store_stock_id', $stock->id)
-            ->where('store_product_id', $product->id)
-            ->where('source_type', '=', 'purchase')
-            ->sum('change_quantity');
-
-        // Sum movements excluding adjustments and purchases
-        $moved = StoreStockMovement::where('store_stock_id', $stock->id)
-            ->where('store_product_id', $product->id)
-            ->where('source_type', '!=', 'adjustment')
-            ->where('source_type', '!=', 'purchase')
-            ->sum('change_quantity');
-
-
-        return $purchased - $moved;
     }
 }

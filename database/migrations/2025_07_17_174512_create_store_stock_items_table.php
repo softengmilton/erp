@@ -23,6 +23,8 @@ return new class extends Migration
             $table->double('sale_price', 10, 2)->default(0);
             $table->json('price_meta')->nullable();
             $table->json('adjustment_data')->nullable();
+            $table->boolean('adjustment')->default(false);
+            $table->json('adjustment_meta')->nullable();
             $table->timestamps();
         });
     }
