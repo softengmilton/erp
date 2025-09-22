@@ -33,7 +33,6 @@ const getStatusBadge = (status) => {
     paid: { bg: "bg-green-100", text: "text-green-800", label: "Paid" },
     due: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Due" },
   };
-
   return statusMap[status] || { bg: "bg-gray-100", text: "text-gray-800", label: status };
 };
 
@@ -50,13 +49,20 @@ const getPaymentMethodIcon = (method) => {
 
 const subtotal = computed(() => {
   return props.order.store_order_items.reduce((sum, item) => {
-    return sum + item.sale_price * item.quantity;
+    return sum + (Number(item.sale_price) || 0) * (Number(item.quantity) || 0);
   }, 0);
 });
 
 const total = computed(() => {
-  return subtotal.value - props.order.discount + props.order.adjustment;
+  return (
+    subtotal.value -
+    (Number(props.order.discount) || 0) +
+    (Number(props.order.adjustment) || 0)
+  );
 });
+
+// Safe money formatting
+const formatMoney = (value) => Number(value || 0).toFixed(2);
 
 // Print invoice using store settings
 const printInvoice = () => {
@@ -130,9 +136,11 @@ const printInvoice = () => {
                   (item) => `
                 <tr>
                   <td>${item.store_product.name}</td>
-                  <td>${item.sale_price.toFixed(2)}</td>
-                  <td>${item.quantity}</td>
-                  <td>${(item.sale_price * item.quantity).toFixed(2)}</td>
+                  <td>${formatMoney(item.sale_price)}</td>
+                  <td>${Number(item.quantity) || 0}</td>
+                  <td>${formatMoney(
+                    (Number(item.sale_price) || 0) * (Number(item.quantity) || 0)
+                  )}</td>
                 </tr>
               `
                 )
@@ -141,14 +149,14 @@ const printInvoice = () => {
           </table>
 
           <table class="totals">
-            <tr><td>Subtotal:</td><td>${subtotal.value.toFixed(2)}</td></tr>
-            <tr><td>Discount:</td><td>-${props.order.discount.toFixed(2)}</td></tr>
-            <tr><td>Adjustment:</td><td>${props.order.adjustment.toFixed(2)}</td></tr>
-            <tr><td>Total:</td><td>${total.value.toFixed(2)}</td></tr>
-            <tr><td>Paid:</td><td>${props.order.paid_amount.toFixed(2)}</td></tr>
+            <tr><td>Subtotal:</td><td>${formatMoney(subtotal.value)}</td></tr>
+            <tr><td>Discount:</td><td>-${formatMoney(props.order.discount)}</td></tr>
+            <tr><td>Adjustment:</td><td>${formatMoney(props.order.adjustment)}</td></tr>
+            <tr><td>Total:</td><td>${formatMoney(total.value)}</td></tr>
+            <tr><td>Paid:</td><td>${formatMoney(props.order.paid_amount)}</td></tr>
             <tr><td>Due:</td><td>${
               props.order.payment_status === "due"
-                ? props.order.due_amount.toFixed(2)
+                ? formatMoney(props.order.due_amount)
                 : "0.00"
             }</td></tr>
             <tr><td>Payment Method:</td><td>${props.order.payment_method}</td></tr>
@@ -266,28 +274,24 @@ const printInvoice = () => {
           <!-- Order Items -->
           <div class="mb-6 overflow-hidden rounded-lg border print:mb-4">
             <table class="min-w-full divide-y">
-              <thead class="">
+              <thead>
                 <tr>
                   <th
-                    scope="col"
                     class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider print:px-2 print:py-1 print:text-xs"
                   >
                     Item
                   </th>
                   <th
-                    scope="col"
                     class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider print:px-2 print:py-1 print:text-xs"
                   >
                     Price
                   </th>
                   <th
-                    scope="col"
                     class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider print:px-2 print:py-1 print:text-xs"
                   >
                     Qty
                   </th>
                   <th
-                    scope="col"
                     class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider print:px-2 print:py-1 print:text-xs"
                   >
                     Total
@@ -314,17 +318,21 @@ const printInvoice = () => {
                   <td
                     class="whitespace-nowrap px-4 py-3 text-right text-sm print:px-2 print:py-1 print:text-xs"
                   >
-                    ${{ item.sale_price.toFixed(2) }}
+                    ${{ formatMoney(item.sale_price) }}
                   </td>
                   <td
                     class="whitespace-nowrap px-4 py-3 text-right text-sm print:px-2 print:py-1 print:text-xs"
                   >
-                    {{ item.quantity }}
+                    {{ Number(item.quantity) || 0 }}
                   </td>
                   <td
                     class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium print:px-2 print:py-1 print:text-xs"
                   >
-                    ${{ (item.sale_price * item.quantity).toFixed(2) }}
+                    ${{
+                      formatMoney(
+                        (Number(item.sale_price) || 0) * (Number(item.quantity) || 0)
+                      )
+                    }}
                   </td>
                 </tr>
               </tbody>
@@ -336,45 +344,41 @@ const printInvoice = () => {
             <h3 class="mb-3 text-lg font-semibold print:mb-1 print:text-base">
               Order Summary
             </h3>
-
             <div class="space-y-2">
               <div class="flex justify-between">
                 <span class="text-sm print:text-xs">Subtotal</span>
-                <span class="text-sm print:text-xs">${{ subtotal.toFixed(2) }}</span>
+                <span class="text-sm print:text-xs"
+                  >${{ formatMoney(subtotal.value) }}</span
+                >
               </div>
-
               <div class="flex justify-between">
                 <span class="text-sm print:text-xs">Discount</span>
                 <span class="text-sm text-red-500 print:text-xs"
-                  >- ${{ order.discount.toFixed(2) }}</span
+                  >- ${{ formatMoney(order.discount) }}</span
                 >
               </div>
-
               <div class="flex justify-between">
                 <span class="text-sm print:text-xs">Adjustment</span>
                 <span class="text-sm print:text-xs"
-                  >+ ${{ order.adjustment.toFixed(2) }}</span
+                  >+ ${{ formatMoney(order.adjustment) }}</span
                 >
               </div>
-
               <div class="flex justify-between border-t pt-2 print:pt-1">
                 <span class="text-base font-bold print:text-sm">Total</span>
                 <span class="text-base font-bold print:text-sm"
-                  >${{ total.toFixed(2) }}</span
+                  >${{ formatMoney(total.value) }}</span
                 >
               </div>
-
               <div class="flex justify-between">
                 <span class="text-sm print:text-xs">Amount Paid</span>
                 <span class="text-sm print:text-xs"
-                  >${{ order.paid_amount.toFixed(2) }}</span
+                  >${{ formatMoney(order.paid_amount) }}</span
                 >
               </div>
-
               <div v-if="order.payment_status === 'due'" class="flex justify-between">
                 <span class="text-sm print:text-xs">Amount Due</span>
                 <span class="text-sm font-medium text-red-500 print:text-xs"
-                  >${{ order.due_amount.toFixed(2) }}</span
+                  >${{ formatMoney(order.due_amount) }}</span
                 >
               </div>
             </div>

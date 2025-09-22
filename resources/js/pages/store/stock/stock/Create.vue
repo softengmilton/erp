@@ -11,6 +11,11 @@ import CardFooter from "@/components/ui/card/CardFooter.vue";
 import Label from "@/components/ui/label/Label.vue";
 import Input from "@/components/ui/input/Input.vue";
 import InputError from "@/components/InputError.vue";
+import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+
+// Initialize store settings
+initStoreSetting();
+
 
 const props = defineProps({
   products: {
@@ -21,6 +26,17 @@ const props = defineProps({
     type: String,
     required: true,
   },
+});
+const isFormValid = computed(() => {
+  const hasInvoice = !!form.invoice_number;
+  const hasSupplier = !!form.supplier_name.trim();
+  const hasProducts = form.products.length > 0;
+
+  const validProducts = form.products.every(
+    (p) => p.quantity > 0 && p.unit_cost > 0 && p.sale_price>0
+  );
+
+  return hasInvoice && hasSupplier && hasProducts && validProducts;
 });
 
 const breadcrumbs = [
@@ -105,15 +121,15 @@ function addProduct(product) {
   form.products.push({
     id: product.id,
     name: product.name,
-    quantity: 1,
-    unit_cost:  0,
+    quantity: 0,
+    unit_cost: 0,
     shipping_cost_per_unit: 0,
     other_fees_per_unit: 0,
     unit_landed_cost: 0,
     shipping_cost: 0,
     other_fees: 0,
-    total_cost:  0,
-    sale_price:  0,
+    total_cost: 0,
+    sale_price: 0,
   });
 
   searchQuery.value = "";
@@ -159,14 +175,91 @@ function removeImage() {
   const fileInput = document.querySelector('input[type="file"]');
   if (fileInput) fileInput.value = "";
 }
+function printInvoice() {
+  const printWindow = window.open("", "", "width=900,height=650");
+  const today = new Date().toLocaleDateString();
+
+const settings = StoreSetting.all.value;
+  const formatCurrency = (val) => Number(val || 0).toFixed(2);
+  const formatNumber = (val) => Number(val || 0);
+
+  const productsRows = (form.products || [])
+    .map(
+      (p) => `
+        <tr>
+          <td style="border:1px solid #ccc;padding:6px;">${p.name ?? ""}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${formatNumber(p.quantity)}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.unit_cost)}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.unit_landed_cost)}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.total_cost)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Purchase Invoice - ${form.invoice_number ?? ""}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1, h2, h3 { margin: 0 0 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }
+          th { background: #f4f4f4; border:1px solid #ccc; padding:6px; }
+          .header{text-align:center}
+        </style>
+      </head>
+      <body>
+            <div class="header">
+            <h1>${settings.business_title || "Store Name"}</h1>
+            <p>${settings.address || ""}</p>
+            <p>${settings.business_email || ""} | ${settings.phone || ""}</p>
+              <h1>Purchase Invoice</h1>
+        <p><strong>Date:</strong> ${today}</p>
+        <p><strong>Invoice #:</strong> ${form.invoice_number ?? "-"}</p>
+        <p><strong>Supplier:</strong> ${form.supplier_name ?? "-"}</p>
+          </div>
+
+
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Unit Cost</th>
+              <th>Landed Cost</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productsRows}
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:20px;">Summary</h3>
+        <p><strong>Subtotal:</strong> $${formatCurrency(subtotal.value)}</p>
+        <p><strong>Shipping:</strong> $${formatCurrency(form.shipping_cost)}</p>
+        <p><strong>Other Fees:</strong> $${formatCurrency(form.other_fees)}</p>
+        <p><strong>Grand Total:</strong> $${formatCurrency(grandTotal.value)}</p>
+
+        <p style="margin-top:20px;"><strong>Notes:</strong><br/>${form.note ?? "-"}</p>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
 
 function submitForm() {
   router.post("/store/stocks", form, {
     onSuccess: () => {
       searchQuery.value = "";
       showProductDropdown.value = false;
+      printInvoice();
     },
-    preserveScroll: true
+    preserveScroll: true,
   });
 }
 </script>
@@ -179,9 +272,7 @@ function submitForm() {
       <div class="flex items-center justify-between mb-6 pb-4 border-b">
         <div>
           <h1 class="text-3xl font-bold">Add New Stock</h1>
-          <p class="mt-1">
-            Fill in the details of your new stock inventory
-          </p>
+          <p class="mt-1">Fill in the details of your new stock inventory</p>
         </div>
         <img
           src="https://cdn-icons-png.flaticon.com/512/3058/3058979.png"
@@ -233,7 +324,9 @@ function submitForm() {
               <div class="w-1 h-6 bg-blue-500 mr-3 rounded-full"></div>
               <CardTitle class="text-lg font-semibold">Products</CardTitle>
             </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">{{ form.products.length }} items</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400"
+              >{{ form.products.length }} items</span
+            >
           </CardHeader>
           <CardContent>
             <div class="mb-6">
@@ -269,30 +362,30 @@ function submitForm() {
 
             <!-- Product Table -->
             <div class="overflow-x-auto border rounded-lg">
-              <table class="min-w-full divide-y ">
-                <thead >
+              <table class="min-w-full divide-y">
+                <thead>
                   <tr>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Product
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Quantity
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Unit Cost
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Shipping/Unit
                     </th>
@@ -304,19 +397,19 @@ function submitForm() {
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Landed Cost
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Total
                     </th>
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider"
+                      class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
                       Sale Price
                     </th>
@@ -329,13 +422,8 @@ function submitForm() {
                   </tr>
                 </thead>
                 <tbody class="divide-y">
-                  <tr
-                    v-for="(item, index) in form.products"
-                    :key="item.id"
-                  >
-                    <td
-                      class="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                    >
+                  <tr v-for="(item, index) in form.products" :key="item.id">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {{ item.name }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -357,18 +445,18 @@ function submitForm() {
                         class="w-24"
                       />
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm ">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
                       ${{ item.shipping_cost_per_unit.toFixed(2) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       ${{ item.other_fees_per_unit.toFixed(2) }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400"
+                    >
                       ${{ item.unit_landed_cost.toFixed(2) }}
                     </td>
-                    <td
-                      class="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                    >
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       ${{ item.total_cost.toFixed(2) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -380,7 +468,9 @@ function submitForm() {
                         class="w-24"
                       />
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                    >
                       <button
                         @click="removeProduct(index)"
                         class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600"
@@ -408,7 +498,7 @@ function submitForm() {
 
             <div
               v-if="form.products.length === 0"
-              class="text-center py-8 border  rounded-lg mt-4"
+              class="text-center py-8 border rounded-lg mt-4"
             >
               <svg
                 class="mx-auto h-12 w-12 text-gray-400"
@@ -423,7 +513,9 @@ function submitForm() {
                   d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                 />
               </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">No products added</h3>
+              <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">
+                No products added
+              </h3>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Search and select products above to add them to this stock entry.
               </p>
@@ -442,7 +534,7 @@ function submitForm() {
               <div>
                 <Label>Subtotal</Label>
                 <div
-                  class="w-full px-4 py-3 border rounded-md text-right font-medium  blur[0.4]"
+                  class="w-full px-4 py-3 border rounded-md text-right font-medium blur[0.4]"
                 >
                   ${{ subtotal.toFixed(2) }}
                 </div>
@@ -476,15 +568,15 @@ function submitForm() {
             <!-- Grand Total Section -->
             <div class="flex justify-end">
               <div class="w-full md:w-1/2 lg:w-1/3">
-                <div class=" p-6 rounded-lg border ">
+                <div class="p-6 rounded-lg border">
                   <div class="space-y-3">
                     <div class="flex justify-between">
                       <span class="text-sm">Subtotal:</span>
-                      <span class="text-sm font-medium ">${{ subtotal.toFixed(2) }}</span>
+                      <span class="text-sm font-medium">${{ subtotal.toFixed(2) }}</span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-sm ">Shipping:</span>
-                      <span class="text-sm font-medium "
+                      <span class="text-sm">Shipping:</span>
+                      <span class="text-sm font-medium"
                         >${{ parseFloat(form.shipping_cost || 0).toFixed(2) }}</span
                       >
                     </div>
@@ -585,6 +677,7 @@ function submitForm() {
       <!-- Submit Button -->
       <CardFooter class="flex justify-end pt-6 animate-on-load">
         <button
+        :disabled="!isFormValid"
           @click="submitForm"
           class="px-6 py-2 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
           style="

@@ -46,12 +46,12 @@ class ProductController extends Controller
         try {
             $request->validate([
                 'name' => 'required',
-                'barcode' => 'required',
+                'barcode' => 'nullable',
                 'description' => 'nullable',
                 'unit' => 'required',
                 'low_stock_alert' => 'required',
                 'store_product_type_id' => 'required',
-                'image' => 'required|image|mimes:jpg,jpeg,png',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png',
             ]);
             DB::beginTransaction();
             $product = StoreProduct::create([

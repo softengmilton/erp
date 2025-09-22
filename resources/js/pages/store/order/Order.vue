@@ -20,7 +20,8 @@ const formatDate = (dateString) => {
     minute: "2-digit",
   });
 };
-
+const formatMoney = (value) =>
+  Number(value || 0).toFixed(2);
 const statusOptions = [
   { value: "", label: "All Statuses" },
   { value: "paid", label: "Paid" },
@@ -279,13 +280,13 @@ const breadcrumbs = [
                   {{ order.storeOrderItems?.length || 0 }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${{ order.total_amount.toFixed(2) }}
+                   ${{ formatMoney(order.total_amount) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${{ order.paid_amount.toFixed(2) }}
+                    ${{ formatMoney(order.paid_amount) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${{ order.due_amount.toFixed(2) }}
+                    ${{ formatMoney(order.due_amount) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <span class="inline-flex items-center gap-1">

@@ -8,7 +8,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Str;
 use App\Models\StoreExpenseType;
 use Exception;
-use Illuminate\Support\Facades\redirect;
+use Illuminate\Support\Facades\Redirect;
 
 class TypeController extends Controller
 {

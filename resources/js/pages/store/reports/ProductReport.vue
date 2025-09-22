@@ -175,6 +175,7 @@ const printTable = () => {
           <h1>${settings.business_title || "Store Name"}</h1>
           <p>${settings.address || ""}</p>
           <p>Report Date: ${new Date().toLocaleDateString()}</p>
+            <h5>Total Profit:  BDT ${reactiveReport.total_profit}</h5>
         </div>
         ${clone.innerHTML}
       </body>

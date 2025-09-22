@@ -133,6 +133,7 @@ const printTable = () => {
     StoreSetting.get("phone") || ""
   }</p>
           <h3>Summary Report: ${props.dateLabel}</h3>
+            <h5>Total Profit:  BDT ${props.allCategoryProfit}</h5>
         </div>
         ${printContent}
       </body>
