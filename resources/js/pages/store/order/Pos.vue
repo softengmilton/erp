@@ -315,9 +315,13 @@ function printInvoice() {
           </table>
         </div>
 
-        <div class="footer">
-          <p>Thank you for your business!</p>
+       <div class="footer">
+            <p>Thank you for your business!</p>
+            <p style="margin-top:8px; font-size:11px; color:#999;">
+                Powered by <a href="https://infinityflamesoft.com/" target="_blank" style="color:#0d9488; text-decoration:none;">Infinity Flame Soft</a>
+            </p>
         </div>
+
       </div>
     </body>
     </html>
