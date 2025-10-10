@@ -11,17 +11,14 @@ Route::get('/', function () {
 //     return Inertia::render('Dashboard');
 // })->middleware(['auth', 'verified'])->name('dashboard');
 
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
-
-
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // Global
     Route::get('/dashboard', [\App\Http\Controllers\Global\DashboardController::class, 'index'])->name('dashboard');
     Route::post('/withdrawals/store', [\App\Http\Controllers\Store\Settings\SettingsController::class, 'withdrawals'])->name('withdrawals.store');
-
 
     Route::name('store.')->prefix('store')->group(function () {
         // Product management routes
@@ -56,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Stock reports
         Route::resource('stock-reports', \App\Http\Controllers\Store\Report\StockReportController::class);
+
+        // Stock product reports
+        Route::resource('stock-product-reports', \App\Http\Controllers\Store\Report\StockProductReportController::class);
 
         // Settings
         Route::resource('settings', \App\Http\Controllers\Store\Settings\SettingsController::class);

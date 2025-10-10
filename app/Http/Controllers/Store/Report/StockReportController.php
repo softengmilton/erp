@@ -4,15 +4,13 @@ namespace App\Http\Controllers\Store\Report;
 
 use App\Http\Controllers\Controller;
 use App\Models\StoreOrderItem;
-use App\Models\StoreProduct;
 use App\Models\StoreProductType;
 use App\Models\StoreStock;
 use App\Models\StoreStockItem;
-use App\Models\StoreStockMovement;
 use App\Services\Store\StockAdjustmentService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class StockReportController extends Controller
 {
@@ -21,7 +19,7 @@ class StockReportController extends Controller
      */
     public function index(Request $request)
     {
-        $service = new StockAdjustmentService();
+        $service = new StockAdjustmentService;
         $service->adjustAllStockItems();
         $selectedMonth = $request->input('month'); // format: YYYY-MM
         $selectedCategoryId = $request->input('category_id');
@@ -81,7 +79,6 @@ class StockReportController extends Controller
 
                 // --- Available stock considering adjustments
                 $availableStock = $initialStock - $soldQty;
-
 
                 $availableStock = $initialStock - $soldQty;
 
