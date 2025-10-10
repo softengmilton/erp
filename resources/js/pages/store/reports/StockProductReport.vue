@@ -5,9 +5,11 @@ import { ref, watch } from 'vue';
 
   const props = defineProps({
     tableData: Array,
+    grands : Object,
   });
 
-console.log(props.tableData);
+// console.log(props.tableData);
+console.log(props.grands);
 
 
 // Breadcrumbs
@@ -52,6 +54,7 @@ const breadcrumbs = [
               <td class="border px-4 py-2">Buy Price Asset</td>
               <td class="border px-4 py-2">Sale Price Asset</td>
               <td class="border px-4 py-2">Sold Product</td>
+              <td class="border px-4 py-2">Sold - Buy Product Price</td>
               <td class="border px-4 py-2">Sold Product Price</td>
               <td class="border px-4 py-2">Total Profit/Product</td>
               
@@ -76,6 +79,7 @@ const breadcrumbs = [
               <td class="border px-4 py-2">{{ item.buy_price_asset  }}</td>
               <td class="border px-4 py-2">{{ item.sale_price_asset  }}</td>
               <td class="border px-4 py-2">{{ item.sold_product  }}</td>
+              <td class="border px-4 py-2">{{ item.sold_buy_product_price  }}</td>
               <td class="border px-4 py-2">{{ item.sold_product_price  }}</td>
               <td class="border px-4 py-2">{{ item.total_profit_product  }}</td>
               
@@ -84,12 +88,27 @@ const breadcrumbs = [
               <td class="border px-4 py-2">{{ item.availble_asset_buy_price  }}</td>
               <td class="border px-4 py-2">{{ item.availble_asset_sale_price  }}</td>
             </tr>
-            <!-- <tr v-for="item in stockSummary" :key="item.product_id">
-              <td class="border px-4 py-2">{{ item.product_name }}</td>
-              <td class="border px-4 py-2">{{ item.total_purchased }}</td>
-              <td class="border px-4 py-2">{{ item.total_sold }}</td>
-              <td class="border px-4 py-2">{{ item.available_stock }}</td>
-            </tr> -->
+            <tr>
+              <td class="border px-4 py-2">Grand Total</td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2"></td>
+              <td class="border px-4 py-2">{{ grands.grand_buy_price_asset }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_sale_price_asset }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_sold_product }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_sold_buy_product_price }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_sold_product_price }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_profit_product }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_initial_stock }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_avaiable_stock }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_availble_asset_buy_price }}</td>
+              <td class="border px-4 py-2">{{ grands.grand_availble_asset_sale_price }}</td>
+            </tr>
           </tbody>
         </table>
       </div>

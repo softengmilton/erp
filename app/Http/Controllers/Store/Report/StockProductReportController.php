@@ -38,6 +38,7 @@ class StockProductReportController extends Controller
         // dd($soldPerInvoice);
 
         // dd($stockMovement);
+
         $tableData = $stockMovement->map(function ($item, $index) use ($soldPerInvoice) {
             // Decode JSON
             $sourceData = is_array($item->source_data) ? $item->source_data : json_decode($item->source_data, true);
@@ -51,6 +52,7 @@ class StockProductReportController extends Controller
             $buy_price_asset = $quantity * $costing_per_product;
             $sale_price_asset = $quantity * $sale_price;
 
+            $sold_buy_product_price = $soldPerInvoice[$item->storeStock->invoice_number] * $costing_per_product;
             $sold_product_price = $soldPerInvoice[$item->storeStock->invoice_number] * $sale_price;
 
             $total_profit_product = $sale_price_asset - $buy_price_asset;
@@ -63,7 +65,9 @@ class StockProductReportController extends Controller
             return [
                 'invoice_number' => $item->storeStock->invoice_number ?? 'N/A',
                 'product_name' => $item->storeProduct->name ?? 'Unknown',
+
                 'quantity' => $item->change_quantity,
+
                 'unit_cost' => $sourceData['unit_cost'] ?? 0,
                 'shipping' => $sourceData['shipping'] ?? 0,
                 'fees' => $sourceData['fees'] ?? 0,
@@ -75,6 +79,7 @@ class StockProductReportController extends Controller
                 'sale_price_asset' => $sale_price_asset,
 
                 'sold_product' => $soldPerInvoice[$item->storeStock->invoice_number] ?? 0,
+                'sold_buy_product_price' => $sold_buy_product_price,
                 'sold_product_price' => $sold_product_price,
                 'total_profit_product' => $total_profit_product,
                 'availble_stock' => $availble_stock,
@@ -84,10 +89,26 @@ class StockProductReportController extends Controller
             ];
         });
 
+        // Now compute all grand totals using collection helpers
+        $grands = [
+            'grand_buy_price_asset' => $tableData->sum('buy_price_asset'),
+            'grand_sale_price_asset' => $tableData->sum('sale_price_asset'),
+            'grand_sold_product' => $tableData->sum('sold_product'),
+            'grand_sold_buy_product_price' => $tableData->sum('sold_buy_product_price'),
+            'grand_sold_product_price' => $tableData->sum('sold_product_price'),
+            'grand_profit_product' => $tableData->sum('total_profit_product'),
+            'grand_initial_stock' => $tableData->sum('quantity'),
+            'grand_avaiable_stock' => $tableData->sum('availble_stock'),
+            'grand_availble_asset_buy_price' => $tableData->sum('availble_asset_buy_price'),
+            'grand_availble_asset_sale_price' => $tableData->sum('availble_asset_sale_price'),
+        ];
+
         // dd($tableData);
+        // dd($grands);
 
         return Inertia::render('store/reports/StockProductReport', [
             'tableData' => $tableData,
+            'grands' => $grands,
         ]);
     }
 
