@@ -3,14 +3,58 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
-  const props = defineProps({
+const props = defineProps({
+    productTypes: Array,
+    products: Array,
     tableData: Array,
     grands : Object,
   });
 
 // console.log(props.tableData);
-console.log(props.grands);
+// console.log(props.grands);
+// console.log(props.productTypes);
 
+const selectedCategory = ref('');
+const selectedProduct = ref('');
+
+const filterData = ref({
+  category_id: null,
+  product_id: null,
+});
+
+// Watch category id
+watch(selectedCategory, (newCatId) => {
+  filterData.value.category_id = newCatId || null;
+  // console.log(newCatId);
+  applyRange();
+});
+
+// Watch product id
+watch(selectedProduct, (newProductId) => {
+  filterData.value.product_id = newProductId || null;
+  // console.log(newProductId);
+  applyRange();
+
+});
+
+function applyRange() {
+  const payload = {};
+
+  // only send params that are not null
+  if (filterData.value.category_id) payload.category_id = filterData.value.category_id;
+  if (filterData.value.product_id) payload.product_id = filterData.value.product_id;
+
+    console.log('Sending payload:', payload); // 👈 add this line
+
+  router.get("/store/stock-product-reports", payload, {
+    preserveState: true,
+    replace: true,
+
+    onSuccess: () => {
+
+    },
+  });
+}
 
 // Breadcrumbs
 const breadcrumbs = [
@@ -36,6 +80,42 @@ const breadcrumbs = [
           </div>
         </div>
       </div>
+
+      
+    <!-- Product Type Selector -->
+    <div class="min-w-[200px]">
+      <select
+        id="category"
+        v-model="selectedCategory"
+        class="w-full border border-gray-300 rounded p-2"
+      >
+        <option value="">Select Product Types</option>
+        <option
+          v-for="type in props.productTypes"
+          :key="type.id"
+          :value="type.id"
+        >
+          {{ type.name }}
+        </option>
+      </select>
+    </div>
+    <!-- Product Selector -->
+    <div class="min-w-[200px]">
+      <select
+        id="category"
+        v-model="selectedProduct"
+        class="w-full border border-gray-300 rounded p-2"
+      >
+        <option value="">Select Product</option>
+        <option
+          v-for="product in props.products"
+          :key="product.id"
+          :value="product.id"
+        >
+          {{ product.name }}
+        </option>
+      </select>
+    </div>
 
       <!-- Report Table -->
       <div class="overflow-x-auto" ref="tableRef">
@@ -66,7 +146,7 @@ const breadcrumbs = [
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in tableData" :key="index">
+            <tr v-for="(item, index) in props.tableData" :key="index">
               <td class="border px-4 py-2">{{ item.invoice_number }}</td>
               <td class="border px-4 py-2">{{ item.product_name }}</td>
               <td class="border px-4 py-2">{{ item.unit_cost }}</td>

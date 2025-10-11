@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Store\Report;
 
 use App\Http\Controllers\Controller;
+use App\Models\StoreProduct;
+use App\Models\StoreProductType;
 use App\Models\StoreStockMovement;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,12 +14,29 @@ class StockProductReportController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
 
-        // Get product Id
-        $productId = StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
-        // dd($productId);
+        // Get category and product IDs from user input
+        $selectedCatId = $request->input('category_id');
+        $selectedProductId = $request->input('product_id');
+
+        // Get all product categories
+        $productTypes = StoreProductType::select('id', 'name')->get();
+
+        // Get all products for the selected category (if category selected)
+        $products = collect(); // empty by default
+        if ($selectedCatId) {
+            $products = StoreProduct::where('store_product_type_id', $selectedCatId)
+                ->select('id', 'name')
+                ->get();
+        }
+
+        // Determine which product ID to use
+        // $productId = StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
+        // $productId = $selectedProductId ? $selectedProductId : StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
+        // $productId = $selectedProductId ?? StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
+        $productId = '1';
 
         // Get all purchase movements with related product, stock, and stock item info
         $stockMovement = StoreStockMovement::with(['storeProduct', 'storeStock', 'storeStockItem'])
@@ -25,7 +44,7 @@ class StockProductReportController extends Controller
             ->where('store_product_id', $productId)
             ->get(['id', 'store_stock_id', 'store_product_id', 'change_quantity', 'source_data']);
 
-        // dd($stockMovement);
+        dd($stockMovement);
 
         // Get total sold per invoice using relationship
         $soldPerInvoice = StoreStockMovement::with('storeStock')
@@ -107,6 +126,8 @@ class StockProductReportController extends Controller
         // dd($grands);
 
         return Inertia::render('store/reports/StockProductReport', [
+            'productTypes' => $productTypes,
+            'products' => $products,
             'tableData' => $tableData,
             'grands' => $grands,
         ]);
