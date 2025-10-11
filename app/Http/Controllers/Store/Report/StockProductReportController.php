@@ -25,7 +25,7 @@ class StockProductReportController extends Controller
         $productTypes = StoreProductType::select('id', 'name')->get();
 
         // Get all products for the selected category (if category selected)
-        $products = collect(); // empty by default
+        $products = collect(); 
         if ($selectedCatId) {
             $products = StoreProduct::where('store_product_type_id', $selectedCatId)
                 ->select('id', 'name')
@@ -33,82 +33,77 @@ class StockProductReportController extends Controller
         }
 
         // Determine which product ID to use
-        // $productId = StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
-        // $productId = $selectedProductId ? $selectedProductId : StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
-        // $productId = $selectedProductId ?? StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
-        $productId = '1';
+        $productId = $selectedProductId ?? StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
 
-        // Get all purchase movements with related product, stock, and stock item info
-        $stockMovement = StoreStockMovement::with(['storeProduct', 'storeStock', 'storeStockItem'])
+        // Get all purchase movements
+        $stockMovements = StoreStockMovement::with(['storeProduct', 'storeStock', 'storeStockItem'])
             ->where('source_type', 'purchase')
             ->where('store_product_id', $productId)
             ->get(['id', 'store_stock_id', 'store_product_id', 'change_quantity', 'source_data']);
 
-        dd($stockMovement);
-
-        // Get total sold per invoice using relationship
+        // Get all sales grouped by invoice
         $soldPerInvoice = StoreStockMovement::with('storeStock')
             ->where('source_type', 'sale')
             ->where('store_product_id', $productId)
             ->get()
-            ->groupBy(fn ($items) => $items->storeStock->invoice_number ?? 'N/A')
+            ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A')
             ->map(fn ($group) => $group->sum('change_quantity'));
 
-        // dd($soldPerInvoice);
+        // Map purchase data and safely merge with sale data
+        $tableData = $stockMovements->map(function ($item) use ($soldPerInvoice) {
+            $invoiceNumber = $item->storeStock->invoice_number ?? 'N/A';
 
-        // dd($stockMovement);
+            $soldQty = $soldPerInvoice[$invoiceNumber] ?? 0;
 
-        $tableData = $stockMovement->map(function ($item, $index) use ($soldPerInvoice) {
-            // Decode JSON
             $sourceData = is_array($item->source_data) ? $item->source_data : json_decode($item->source_data, true);
 
             $quantity = $item->change_quantity;
+            $unit_cost = $sourceData['unit_cost'] ?? 0;
+            $shipping = $sourceData['shipping'] ?? 0;
+            $fees = $sourceData['fees'] ?? 0;
 
-            $costing_per_product = ($sourceData['unit_cost'] ?? 0) + ($sourceData['shipping'] ?? 0) + ($sourceData['fees'] ?? 0);
-            $sale_price = $item->storeStockItem->sale_price;
+            $costing_per_product = $unit_cost + $shipping + $fees;
+            $sale_price = $item->storeStockItem->sale_price ?? 0;
             $profit_per_product = $sale_price - $costing_per_product;
 
             $buy_price_asset = $quantity * $costing_per_product;
             $sale_price_asset = $quantity * $sale_price;
 
-            $sold_buy_product_price = $soldPerInvoice[$item->storeStock->invoice_number] * $costing_per_product;
-            $sold_product_price = $soldPerInvoice[$item->storeStock->invoice_number] * $sale_price;
+            $sold_buy_product_price = $soldQty * $costing_per_product;
+            $sold_product_price = $soldQty * $sale_price;
+            $total_profit_product = $sold_product_price - $sold_buy_product_price;
 
-            $total_profit_product = $sale_price_asset - $buy_price_asset;
-
-            $availble_stock = $quantity - $soldPerInvoice[$item->storeStock->invoice_number];
-
+            $availble_stock = $quantity - $soldQty;
             $availble_asset_buy_price = $availble_stock * $costing_per_product;
             $availble_asset_sale_price = $availble_stock * $sale_price;
 
             return [
-                'invoice_number' => $item->storeStock->invoice_number ?? 'N/A',
+                'invoice_number' => $invoiceNumber,
                 'product_name' => $item->storeProduct->name ?? 'Unknown',
+                'quantity' => $quantity,
 
-                'quantity' => $item->change_quantity,
-
-                'unit_cost' => $sourceData['unit_cost'] ?? 0,
-                'shipping' => $sourceData['shipping'] ?? 0,
-                'fees' => $sourceData['fees'] ?? 0,
+                'unit_cost' => $unit_cost,
+                'shipping' => $shipping,
+                'fees' => $fees,
                 'costing_per_product' => $costing_per_product,
-                'sale_price' => $item->storeStockItem->sale_price ?? 0,
+                'sale_price' => $sale_price,
                 'profit_per_product' => $profit_per_product,
 
                 'buy_price_asset' => $buy_price_asset,
                 'sale_price_asset' => $sale_price_asset,
 
-                'sold_product' => $soldPerInvoice[$item->storeStock->invoice_number] ?? 0,
+                'sold_product' => $soldQty,
                 'sold_buy_product_price' => $sold_buy_product_price,
                 'sold_product_price' => $sold_product_price,
                 'total_profit_product' => $total_profit_product,
-                'availble_stock' => $availble_stock,
 
+                'availble_stock' => $availble_stock,
                 'availble_asset_buy_price' => $availble_asset_buy_price,
                 'availble_asset_sale_price' => $availble_asset_sale_price,
             ];
         });
 
-        // Now compute all grand totals using collection helpers
+        // Compute totals
         $grands = [
             'grand_buy_price_asset' => $tableData->sum('buy_price_asset'),
             'grand_sale_price_asset' => $tableData->sum('sale_price_asset'),
