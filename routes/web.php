@@ -57,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Stock product reports
         Route::resource('stock-product-reports', \App\Http\Controllers\Store\Report\StockProductReportController::class);
 
+        Route::resource('total-asset', \App\Http\Controllers\Store\Report\TotalAssetController::class);
+
         // Settings
         Route::resource('settings', \App\Http\Controllers\Store\Settings\SettingsController::class);
 

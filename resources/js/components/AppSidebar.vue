@@ -94,6 +94,10 @@ const mainNavItems: NavItem[] = [
             title: 'Stock Product Reports',
             href: '/store/stock-product-reports',
           },
+          {
+            title: 'Assets',
+            href: '/store/total-asset',
+          },
         ],
       },
       {

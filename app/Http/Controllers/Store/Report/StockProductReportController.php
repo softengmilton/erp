@@ -25,7 +25,7 @@ class StockProductReportController extends Controller
         $productTypes = StoreProductType::select('id', 'name')->get();
 
         // Get all products for the selected category (if category selected)
-        $products = collect(); 
+        $products = collect();
         if ($selectedCatId) {
             $products = StoreProduct::where('store_product_type_id', $selectedCatId)
                 ->select('id', 'name')
@@ -116,9 +116,6 @@ class StockProductReportController extends Controller
             'grand_availble_asset_buy_price' => $tableData->sum('availble_asset_buy_price'),
             'grand_availble_asset_sale_price' => $tableData->sum('availble_asset_sale_price'),
         ];
-
-        // dd($tableData);
-        // dd($grands);
 
         return Inertia::render('store/reports/StockProductReport', [
             'productTypes' => $productTypes,
