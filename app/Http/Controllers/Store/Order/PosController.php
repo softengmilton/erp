@@ -44,7 +44,7 @@ class PosController extends Controller
             }
 
             // Get all stock invoice numbers
-            $stockNumbers = \App\Models\StoreStock::pluck('invoice_number')->toArray();
+            $stockNumbers = \App\Models\StoreStock::orderByDesc('id')->pluck('invoice_number')->toArray();
 
             // Get product IDs from stock items
             $stockItemIds = $stock->storeStockItems->pluck('store_product_id');
