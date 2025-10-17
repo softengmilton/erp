@@ -20,6 +20,11 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        \App\Models\StoreExpenseType::factory()->create([
+            'name' => 'Assets',
+            'slug' => 'assets',
+            'description' => 'Default expense type',
+        ]);
         // $this->call([
         //     CustomerSeeder::class,
         //     StoreProductType::class,

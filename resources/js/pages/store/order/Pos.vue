@@ -11,11 +11,12 @@ initStoreSetting();
 // 1. Props
 // ======================
 const props = defineProps({
-  stock: { type: Object, required: true },
+  stocks: { type: Array, required: true },
   productTypes: { type: Array, required: true },
-  stockNumbers: { type: Array, required: true },
   customers: { type: Array, required: true },
 });
+
+console.log("Props:", props);
 
 // ======================
 // 2. State
@@ -27,12 +28,11 @@ const discountPercentage = ref(0);
 const adjustmentAmount = ref(0);
 const paidAmount = ref(0);
 
-const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
-const showStockDropdown = ref(false);
+// const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
+// const showStockDropdown = ref(false);
 
 const searchProductQuery = ref("");
-const selectedStock = ref(props.stock?.stock_number || props.stock.invoice_number);
-const selectedCategory = ref(null);
+// const selectedStock = ref(props.stock?.stock_number || props.stock.invoice_number);
 const cartItems = ref([]);
 // Loading state
 const isSubmitting = ref(false);
@@ -47,19 +47,45 @@ const selectedPaymentMethod = ref("cash");
 // ======================
 // 3. Computed Properties
 // ======================
-const stockOptions = computed(() => [...props.stockNumbers]);
+// const stockOptions = computed(() => [...props.stockNumbers]);
+const allStockItems = computed(() => {
+  return props.stocks.flatMap(
+    (stock) =>
+      stock.store_stock_items.map((item) => ({
+        ...item,
+        stock_number: stock.invoice_number,
+      })) || []
+  );
+});
+const selectedCategory = ref("");
+const selectedInvoice = ref("");
+const stockFilter = ref(""); // values: "", "in-stock", "out-of-stock"
+const showFilter = ref(false);
 
 const filteredProducts = computed(() => {
-  let items = props.stock.store_stock_items || [];
+  let items = allStockItems.value;
 
-  // Filter by category if one is selected
+  // Filter by category
   if (selectedCategory.value) {
-    items = items.filter((item) => {
-      return (
+    items = items.filter(
+      (item) =>
         String(item.store_product?.store_product_type_id) ===
         String(selectedCategory.value)
-      );
-    });
+    );
+  }
+
+  // Filter by invoice number
+  if (selectedInvoice.value) {
+    items = items.filter((item) => item.stock_number === selectedInvoice.value);
+  }
+
+  // Filter by stock availability
+  if (stockFilter.value) {
+    if (stockFilter.value === "in-stock") {
+      items = items.filter((item) => item.current_quantity > 0);
+    } else if (stockFilter.value === "out-of-stock") {
+      items = items.filter((item) => item.current_quantity <= 0);
+    }
   }
 
   // Filter by search query
@@ -94,17 +120,17 @@ const dueAmount = computed(() => {
 // ======================
 // 4. Watchers
 // ======================
-watch(selectedStock, (newStockNumber) => {
-  router.get(
-    "pos",
-    { stock_number: newStockNumber },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      only: ["stock", "productTypes"],
-    }
-  );
-});
+// watch(selectedStock, (newStockNumber) => {
+//   router.get(
+//     "pos",
+//     { stock_number: newStockNumber },
+//     {
+//       preserveState: true,
+//       preserveScroll: true,
+//       only: ["stock", "productTypes"],
+//     }
+//   );
+// });
 
 // Auto-set paid amount to total when payment method changes
 watch(selectedPaymentMethod, () => {
@@ -117,6 +143,7 @@ watch(selectedPaymentMethod, () => {
 // In your methods section, update these functions:
 
 function addToCart(item) {
+  console.log("Adding to cart:", item);
   if (item.current_quantity <= 0) {
     alert("This product is out of stock!");
     return;
@@ -126,7 +153,7 @@ function addToCart(item) {
 
   if (existing) {
     // Check against current stock in the store
-    const productInStock = props.stock.store_stock_items.find((p) => p.id === item.id);
+    const productInStock = allStockItems.value.find((p) => p.id === item.id);
     if (existing.quantity < productInStock.current_quantity) {
       existing.quantity += 1;
     } else {
@@ -134,7 +161,7 @@ function addToCart(item) {
     }
   } else {
     cartItems.value.push({
-      stock_number: selectedStock.value,
+      stock_number: item.store_stock_id, // Track stock id
       id: item.id,
       product: item.store_product,
       price: item.sale_price,
@@ -152,12 +179,32 @@ function removeFromCart(itemId) {
 function increaseQuantity(itemId) {
   const item = cartItems.value.find((item) => item.id === itemId);
   if (item) {
-    // Find current stock status
-    const productInStock = props.stock.store_stock_items.find((p) => p.id === itemId);
-    if (productInStock && item.quantity < productInStock.current_quantity) {
+    const productInStock = allStockItems.value.find((p) => p.id === itemId);
+    if (item.quantity < productInStock.current_quantity) {
       item.quantity += 1;
     } else {
       alert(`Only ${productInStock.current_quantity} items available in stock!`);
+    }
+  }
+}
+
+function changeQuantity(itemId, newQuantity) {
+  const item = cartItems.value.find((item) => item.id === itemId);
+
+  if (newQuantity === null || newQuantity === "" || newQuantity < 1) {
+    item.quantity = newQuantity;
+    return;
+  }
+
+  if (item) {
+    const productInStock = allStockItems.value.find((p) => p.id === itemId);
+    if (newQuantity <= 0) {
+      removeFromCart(itemId);
+    } else if (newQuantity <= productInStock.current_quantity) {
+      item.quantity = newQuantity;
+    } else {
+      alert(`Only ${productInStock.current_quantity} items available in stock!`);
+      item.quantity = productInStock.current_quantity; // Set to max available
     }
   }
 }
@@ -181,7 +228,6 @@ function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
 //
-
 function printInvoice() {
   const printWindow = window.open("", "_blank");
 
@@ -239,7 +285,7 @@ function printInvoice() {
           </div>
           <div>
             <strong>Invoice #:</strong> INV-${new Date().getTime()}<br>
-            <strong>Stock #:</strong> ${selectedStock.value}
+
           </div>
         </div>
 
@@ -338,16 +384,17 @@ function printInvoice() {
   };
 }
 //
-
 function submitOrder() {
   if (cartItems.value.length === 0) return;
+  // please give quantity more than 0 and if 0 remove that item from cart
+  cartItems.value = cartItems.value.filter((item) => item.quantity > 0);
 
   isSubmitting.value = true;
-
   const orderData = {
     items: cartItems.value.map((item) => ({
       id: item.id,
       quantity: item.quantity,
+      //   stock_number: item.store_stock_id, // Send stock id
     })),
     payment_method: selectedPaymentMethod.value,
     total: cartTotal.value,
@@ -355,7 +402,6 @@ function submitOrder() {
     due: dueAmount.value,
     discount: cartDiscount.value,
     adjustment: adjustmentAmount.value,
-    stock_number: selectedStock.value,
     customer_id: selectedCustomer.value ? selectedCustomer.value.id : null,
   };
   router.post("pos", orderData, {
@@ -530,109 +576,6 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
             class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-500 border-gray-200 shadow-sm text-sm"
             placeholder="Search products..."
           />
-        </div>
-
-        <!-- Stock Select Dropdown -->
-        <div class="relative">
-          <button
-            id="stockDropdownButton"
-            @click="showStockDropdown = !showStockDropdown"
-            class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
-            type="button"
-          >
-            {{ selectedStock }}
-            <svg
-              class="w-2.5 h-2.5 ms-3"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 10 6"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="m1 1 4 4 4-4"
-              />
-            </svg>
-          </button>
-
-          <!-- Dropdown menu -->
-          <div
-            id="stockDropdown"
-            v-show="showStockDropdown"
-            class="z-10 absolute mt-1 bg-white rounded-lg shadow-sm w-60 dark:bg-gray-700"
-          >
-            <div class="p-3">
-              <label for="stock-search" class="sr-only">Search</label>
-              <div class="relative">
-                <div
-                  class="absolute inset-y-0 rtl:inset-r-0 start-0 flex items-center ps-3 pointer-events-none"
-                >
-                  <svg
-                    class="w-4 h-4 text-gray-500 dark:text-gray-400"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-                    />
-                  </svg>
-                </div>
-                <input
-                  v-model="stockSearchQuery"
-                  type="text"
-                  id="stock-search"
-                  class="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="Search stock"
-                  @click.stop
-                />
-              </div>
-            </div>
-            <ul
-              class="px-3 pb-3 overflow-y-auto text-sm text-gray-700 dark:text-gray-200"
-              style="max-height: 200px"
-            >
-              <li
-                v-for="option in stockOptions.filter((o) =>
-                  o.toLowerCase().includes(stockSearchQuery.toLowerCase())
-                )"
-                :key="option"
-              >
-                <div
-                  class="flex items-center ps-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
-                  @click="
-                    selectedStock = option;
-                    showStockDropdown = false;
-                  "
-                >
-                  <div
-                    class="w-full py-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300"
-                  >
-                    {{ option }}
-                  </div>
-                </div>
-              </li>
-              <li
-                v-if="
-                  stockOptions.filter((o) =>
-                    o.toLowerCase().includes(stockSearchQuery.toLowerCase())
-                  ).length === 0
-                "
-              >
-                <div class="py-2 text-sm text-gray-500 text-center">
-                  No stock options found
-                </div>
-              </li>
-            </ul>
-          </div>
         </div>
 
         <!-- Discount Button with Dropdown -->
@@ -851,32 +794,98 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
     <!-- Main Layout -->
     <div class="w-full px-4 py-4">
       <div class="grid grid-cols-12 gap-4 h-[calc(100vh-96px)]">
-        <!-- Sidebar: Scrollable (col-2) -->
-        <div
-          class="col-span-4 lg:col-span-1 overflow-y-auto rounded shadow-inner border p-2 space-y-2"
-        >
-          <a
-            href="#"
-            v-for="type in props.productTypes"
-            :key="type.id"
-            @click.prevent="
-              selectedCategory = selectedCategory === type.id ? null : type.id
-            "
-            :class="[
-              'flex flex-col items-center hover:bg-gray-100 dark:hover:bg-gray-900 p-2 border rounded shadow-sm',
-              selectedCategory === type.id ? 'bg-teal-50 border-teal-500' : '',
-            ]"
-          >
-            <img
-              :src="type.primary_image_url"
-              class="w-12 h-12 object-cover rounded-full mb-1"
-            />
-            <span class="text-xs font-medium text-center">{{ type.name }}</span>
-          </a>
-        </div>
-
         <!-- Products Grid: 6 per row (col-6) -->
         <div class="col-span-8 lg:col-span-8 overflow-y-auto">
+          <!---- Bottom Header ---->
+          <!-- Filters Section -->
+          <div class="border-t border-gray-200 pt-4 mb-6">
+            <div class="flex items-center justify-between">
+              <!-- Filters container -->
+              <div
+                :class="[
+                  'flex flex-wrap items-center gap-3 min-w-[60%] transition-all duration-300 ease-in-out overflow-hidden',
+                  showFilter ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0',
+                ]"
+              >
+                <!-- Category Filter -->
+                <select
+                  v-model="selectedCategory"
+                  class="border rounded px-3 py-2 text-sm w-48"
+                >
+                  <option value="">All Categories</option>
+                  <option
+                    v-for="type in props.productTypes"
+                    :key="type.id"
+                    :value="type.id"
+                  >
+                    {{ type.name }}
+                  </option>
+                </select>
+
+                <!-- Invoice Filter -->
+                <select
+                  v-model="selectedInvoice"
+                  class="border rounded px-3 py-2 text-sm w-48"
+                >
+                  <option value="">All Invoices</option>
+                  <option
+                    v-for="stock in props.stocks"
+                    :key="stock.id"
+                    :value="stock.invoice_number"
+                  >
+                    {{ stock.invoice_number }}
+                  </option>
+                </select>
+
+                <!-- Stock Availability Filter -->
+                <select
+                  v-model="stockFilter"
+                  class="border rounded px-3 py-2 text-sm w-48"
+                >
+                  <option value="">All Stock</option>
+                  <option value="in-stock">In Stock</option>
+                  <option value="out-of-stock">Out of Stock</option>
+                </select>
+
+                <!-- Reset Filters -->
+                <button
+                  @click="
+                    () => {
+                      selectedCategory = '';
+                      selectedInvoice = '';
+                      stockFilter = '';
+                      searchProductQuery = '';
+                    }
+                  "
+                  class="px-3 py-2 border rounded text-sm bg-gray-50 hover:bg-gray-100"
+                >
+                  Reset
+                </button>
+              </div>
+
+              <!-- Show Filter Button with Tailwind transition -->
+              <button
+                @click="showFilter = !showFilter"
+                class="inline-flex items-center rounded px-4 py-2 text-sm hover:bg-gray-50 transition-colors duration-300"
+              >
+                <!-- Hamburger / Close icon -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-7 w-7 transition-transform duration-300"
+                  :class="
+                    showFilter ? 'rotate-180 text-pink-500' : 'rotate-0 text-teal-500'
+                  "
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 15.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-5.586L3.293 6.707A1 1 0 013 6V4z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           <div
             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
           >
@@ -917,15 +926,20 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                 {{ formatCurrency(item.sale_price) }}
               </div>
             </div>
+            <!-- No products found -->
+            <div
+              v-if="filteredProducts.length === 0"
+              class="col-span-full text-center text-gray-500 py-10"
+            >
+              No products found
+            </div>
           </div>
         </div>
 
         <!-- Cart Sidebar (col-4) -->
         <div
-          class="col-span-12 lg:col-span-3 flex flex-col border light:border-slate-200 rounded shadow-md p-4"
+          class="col-span-12 lg:col-span-4 flex flex-col border light:border-slate-200 rounded shadow-md p-4"
         >
-          <!-- Customer Info -->
-          <!-- Customer Info -->
           <!-- Customer Info -->
           <div class="flex justify-between text-sm text-teal-600 mb-4">
             <a href="#" class="hover:underline" @click="openCustomerModal">
@@ -933,7 +947,6 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
             </a>
           </div>
           <!--  customer modal -->
-          <!-- Customer modal -->
           <div
             v-if="customerModal"
             class="fixed inset-0 flex items-start justify-center z-50 p-4 pt-20"
@@ -1097,7 +1110,13 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
                   >
                     -
                   </button>
-                  <span class="text-sm">{{ item.quantity }}</span>
+                  <input
+                    v-model.number="item.quantity"
+                    @input="changeQuantity(item.id, item.quantity)"
+                    type="number"
+                    min="1"
+                    class="w-12 text-center border rounded px-1 py-0.5 text-sm"
+                  />
                   <button
                     @click.stop="increaseQuantity(item.id)"
                     class="w-6 h-6 flex items-center justify-center border rounded text-gray-600 hover:bg-gray-100 hover:text-teal-600 transition-colors"

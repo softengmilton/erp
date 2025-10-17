@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('store_stock_movements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('store_stock_id')->constrained('store_stocks')->cascadeOnDelete();
+            $table->foreignId('store_stock_item_id')->constrained('store_stock_items')->cascadeOnDelete();
             $table->foreignId('store_product_id')->constrained('store_products')->cascadeOnDelete();
             $table->integer('change_quantity')->default(0);
-            $table->enum('source_type', ['purchase', 'sale', 'return','adjustment'])->default('sale');
+            $table->enum('source_type', ['purchase', 'sale', 'return', 'adjustment'])->default('sale');
             $table->json('source_data')->nullable();
             $table->timestamps();
         });
