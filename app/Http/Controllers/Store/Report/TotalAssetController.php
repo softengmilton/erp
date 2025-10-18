@@ -24,8 +24,8 @@ class TotalAssetController extends Controller
             // sales for THIS product grouped by invoice_number
             $soldPerInvoice = $movements
                 ->where('source_type', 'sale')
-                ->groupBy(fn ($m) => $m->storeStock->invoice_number ?? 'N/A')
-                ->map(fn ($group) => $group->sum('change_quantity')); // invoice_number => sold_qty
+                ->groupBy(fn($m) => $m->storeStock->invoice_number ?? 'N/A')
+                ->map(fn($group) => $group->sum('change_quantity')); // invoice_number => sold_qty
 
             // process purchase movements for THIS product
             $purchaseRows = $movements

@@ -23,7 +23,7 @@
         </Widget>
       </div>
 
-      <!-- Second row: stats -->
+      <!-- Second row: 4 stat widgets -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Widget
           v-for="(item, index) in secondRowWidgets"
@@ -40,12 +40,12 @@
         <div
           class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
-          <SpilineAreaChart :chartData="monthlyData" />
+          <SpilineAreaChart />
         </div>
         <div
           class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
         >
-          <StackedColumnsChart :chartData="salesByType" />
+          <StackedColumnsChart />
         </div>
       </div>
     </div>
@@ -53,37 +53,26 @@
 </template>
 
 <script setup lang="ts">
-/**
- * DASHBOARD PAGE
- * - Fixes chart props passing
- * - Fixes type errors in chartData
- * - Fully compatible with Inertia backend (DashboardController)
- */
-import AppLayout from '@/layouts/AppLayout.vue'
-import { Head } from '@inertiajs/vue3'
-import Widget from '@/components/Widget.vue'
-import SpilineAreaChart from '@/components/charts/SpilineAreaChart.vue'
-import StackedColumnsChart from '@/components/charts/StackedColumnsChart.vue'
-import { ref } from 'vue'
-import * as LucideIcons from 'lucide-vue-next'
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/vue3';
 
-// ✅ Receive data from backend (Inertia)
-const props = defineProps({
-  widgets: { type: Object, default: () => ({}) },
-  monthlyData: { type: Object, default: () => ({ months: [], revenue: [], expenses: [] }) },
-  salesByType: { type: Object, default: () => ({ months: [], data: [] }) },
-  productTypes: { type: Array, default: () => [] }
-})
+import Widget from '@/components/Widget.vue';
+import SpilineAreaChart from '@/components/charts/SpilineAreaChart.vue';
+import StackedColumnsChart from '@/components/charts/StackedColumnsChart.vue';
 
-console.log('Dashboard props:', props.salesByType);
+// Import icons from lucide-vue-next
+import * as LucideIcons from 'lucide-vue-next';
 
-// Breadcrumbs
-const breadcrumbs = [{ title: 'Dashboard', href: '/dashboard' }]
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: 'Dashboard', href: '/dashboard' },
+];
 
-// Selected index (for top row highlight)
-const selectedIndex = ref(0)
+// Selected index for highlighting
+import { ref } from 'vue';
+const selectedIndex = ref(0);
 
-// First row widgets (category icons)
+// First row widgets (scrollable, icon + name)
 const firstRowWidgets = [
   { title: 'Store', gradientFrom: 'from-pink-500', gradientTo: 'to-red-400', icon: LucideIcons.Store },
   { title: 'Restaurant', gradientFrom: 'from-green-400', gradientTo: 'to-teal-400', icon: LucideIcons.Coffee },
@@ -92,39 +81,19 @@ const firstRowWidgets = [
   { title: 'Park', gradientFrom: 'from-blue-500', gradientTo: 'to-indigo-400', icon: LucideIcons.ShoppingCart },
   { title: 'Resort', gradientFrom: 'from-purple-500', gradientTo: 'to-pink-400', icon: LucideIcons.Home },
   { title: 'Swimming Pool', gradientFrom: 'from-cyan-400', gradientTo: 'to-blue-400', icon: LucideIcons.Coffee },
-  { title: 'Ride', gradientFrom: 'from-pink-500', gradientTo: 'to-red-400', icon: LucideIcons.ShoppingCart },
+  { title: 'Ride', gradientFrom: 'from-pink-500', gradientTo: 'to-red-400',  icon: LucideIcons.ShoppingCart },
   { title: 'Children Zone', gradientFrom: 'from-blue-500', gradientTo: 'to-indigo-400', icon: LucideIcons.Home },
-  { title: 'Boat Ride', gradientFrom: 'from-yellow-400', gradientTo: 'to-orange-400', icon: LucideIcons.ShoppingCart },
-  { title: 'LPG Station', gradientFrom: 'from-pink-500', gradientTo: 'to-red-400', icon: LucideIcons.Home },
-]
+  { title: 'Boat Ride',  gradientFrom: 'from-yellow-400', gradientTo: 'to-orange-400', icon: LucideIcons.ShoppingCart },
+  { title: 'LPG Station',gradientFrom: 'from-pink-500', gradientTo: 'to-red-400', icon: LucideIcons.Home },
+];
 
-// Second row stats (dynamic from backend)
+// Second row widgets (stats)
 const secondRowWidgets = [
-  {
-    title: 'Sales',
-    value: `$${Number(props.widgets.sales?.month || 0).toLocaleString()}`,
-    gradientFrom: 'from-blue-500',
-    gradientTo: 'to-indigo-400'
-  },
-  {
-    title: 'Revenue',
-    value: `$${Number(props.widgets.revenue?.month || 0).toLocaleString()}`,
-    gradientFrom: 'from-pink-500',
-    gradientTo: 'to-red-400'
-  },
-  {
-    title: 'Products',
-    value: `${props.widgets.products || 0}`,
-    gradientFrom: 'from-yellow-400',
-    gradientTo: 'to-orange-400'
-  },
-  {
-    title: 'Due',
-    value: `$${Number(props.widgets.due || 0).toLocaleString()}`,
-    gradientFrom: 'from-green-400',
-    gradientTo: 'to-teal-400'
-  }
-]
+  { title: 'Sales', value: '$25,000', gradientFrom: 'from-blue-500', gradientTo: 'to-indigo-400' },
+  { title: 'Revenue', value: '$40,000', gradientFrom: 'from-pink-500', gradientTo: 'to-red-400' },
+  { title: 'Product', value: '120', gradientFrom: 'from-yellow-400', gradientTo: 'to-orange-400' },
+  { title: 'Due', value: '$5,000', gradientFrom: 'from-green-400', gradientTo: 'to-teal-400' },
+];
 </script>
 
 <style scoped>
@@ -132,23 +101,29 @@ const secondRowWidgets = [
 .overflow-x-auto::-webkit-scrollbar {
   height: 8px;
 }
+
 .overflow-x-auto::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
+
 .overflow-x-auto::-webkit-scrollbar-thumb {
   background: #c5c5c5;
   border-radius: 4px;
 }
+
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
 .dark .overflow-x-auto::-webkit-scrollbar-track {
   background: #374151;
 }
+
 .dark .overflow-x-auto::-webkit-scrollbar-thumb {
   background: #6b7280;
 }
+
 .dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }

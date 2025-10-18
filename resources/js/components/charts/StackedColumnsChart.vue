@@ -87,7 +87,7 @@ const options = computed(() => {
     },
     yaxis: {
       title: {
-        text: "Sales Amount ($)",
+        text: "Sales Amount (৳)",
         style: {
           fontSize: isMobile ? '11px' : '12px',
           fontFamily: 'inherit',
@@ -100,9 +100,9 @@ const options = computed(() => {
         },
         formatter: function (val: number) {
           if (isMobile && val >= 1000) {
-            return '$' + (val / 1000).toFixed(0) + 'K';
+            return '৳' + (val / 1000).toFixed(0) + 'K';
           }
-          return '$' + val;
+          return '৳' + val;
         },
       },
     },
@@ -126,7 +126,7 @@ const options = computed(() => {
     tooltip: {
       y: {
         formatter: function (val: number) {
-          return "$" + val.toLocaleString();
+          return "৳" + val.toLocaleString();
         },
       },
       style: {

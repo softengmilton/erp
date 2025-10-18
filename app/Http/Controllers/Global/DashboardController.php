@@ -57,9 +57,12 @@ class DashboardController extends Controller
                 'month' => $monthRevenue
             ],
             'products' => $productCount,
-            'due' => $totalDue
+            'due' => $totalDue,
+            'sale_assets' => [
+                'buy_price' => $this->availableAssetsBuyPrice(),
+                'sale_price' => $this->availableAssetsSalePrice(),
+            ],
         ];
-        // dd($salesByTypeData);
 
         return Inertia::render('global/Dashboard', [
             'widgets' => $widgets,
@@ -138,7 +141,7 @@ class DashboardController extends Controller
     /**
      * Get sales by product type for the last 12 months
      */
-    private function getSalesByTypeData($monthStart, $monthEnd)
+    private function getSalesByTypeData()
     {
         $startWindow = now()->subMonths(11)->startOfMonth();
         $endWindow = now()->endOfMonth();
@@ -184,5 +187,69 @@ class DashboardController extends Controller
             'months' => $months,
             'data' => $salesByType
         ];
+    }
+
+    /**
+     * Calculate total available assets buy price
+     */
+    public function availableAssetsBuyPrice()
+    {
+        $totalBuyPrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
+            ->get()
+            ->flatMap(function ($product) {
+                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
+                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+
+                    // Calculate sold quantity for this invoice
+                    $soldQty = $product->storeStockMovements
+                        ->where('source_type', 'sale')
+                        ->where('storeStock.invoice_number', $invoiceNumber)
+                        ->sum('change_quantity');
+
+                    $quantity = $purchase->change_quantity;
+                    $sourceData = is_array($purchase->source_data) ? $purchase->source_data : json_decode($purchase->source_data ?? '{}', true);
+                    $unitCost = $sourceData['unit_cost'] ?? 0;
+                    $shipping = $sourceData['shipping'] ?? 0;
+                    $fees = $sourceData['fees'] ?? 0;
+
+                    $availableStock = max(0, $quantity - $soldQty);
+                    $costPerProduct = $unitCost + $shipping + $fees;
+
+                    return $availableStock * $costPerProduct;
+                });
+            })
+            ->sum();
+
+        return $totalBuyPrice;
+    }
+
+    /**
+     * Calculate total available assets sale price
+     */
+    public function availableAssetsSalePrice()
+    {
+        $totalSalePrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
+            ->get()
+            ->flatMap(function ($product) {
+                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
+                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+
+                    // Calculate sold quantity for this invoice
+                    $soldQty = $product->storeStockMovements
+                        ->where('source_type', 'sale')
+                        ->where('storeStock.invoice_number', $invoiceNumber)
+                        ->sum('change_quantity');
+
+                    $quantity = $purchase->change_quantity;
+                    $availableStock = max(0, $quantity - $soldQty);
+
+                    $salePrice = $purchase->storeStockItem->sale_price ?? 0;
+
+                    return $availableStock * $salePrice;
+                });
+            })
+            ->sum();
+
+        return $totalSalePrice;
     }
 }

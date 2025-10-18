@@ -1,6 +1,6 @@
 const formatCurrency = (value) => {
   if (value === null || value === undefined || isNaN(value)) return 'N/A';
-  return `$${parseFloat(value).toFixed(2)}`;
+  return ` ৳${parseFloat(value).toFixed(2)}`;
 };
 
 // Date formatting function

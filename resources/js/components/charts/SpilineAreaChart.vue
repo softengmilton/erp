@@ -120,9 +120,9 @@ const options = computed(() => {
         },
         formatter: function(val: number) {
           if (isMobile && Math.abs(val) >= 1000) {
-            return '$' + (val / 1000).toFixed(1) + 'K';
+            return '৳' + (val / 1000).toFixed(1) + 'K';
           }
-          return '$' + val;
+          return '৳' + val;
         }
       }
     },
@@ -169,7 +169,7 @@ const options = computed(() => {
       intersect: false,
       y: {
         formatter: function(val: number) {
-          return "$" + val.toLocaleString();
+          return "৳" + val.toLocaleString();
         }
       },
       style: {
@@ -208,9 +208,9 @@ const options = computed(() => {
             },
             formatter: function(val: number) {
               if (Math.abs(val) >= 1000) {
-                return '$' + (val / 1000).toFixed(1) + 'K';
+                return '৳' + (val / 1000).toFixed(1) + 'K';
               }
-              return '$' + val;
+              return '৳' + val;
             }
           }
         },
