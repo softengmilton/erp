@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({
   chartData: {
-    type: Array,
-    default: () => []
+    type: Object,
+    default: () => ({
+      months: [],
+      data: []
+    })
   }
 });
 
@@ -27,39 +30,40 @@ const updateScreenSize = () => {
   }
 };
 
-// Set up responsive event listener
+// Watch screen resize
 onMounted(() => {
   updateScreenSize();
   window.addEventListener('resize', updateScreenSize);
 });
-
 onUnmounted(() => {
   window.removeEventListener('resize', updateScreenSize);
 });
 
+// ✅ Use correct structure for series
 const series = computed(() => {
-  return props.chartData.map((item: any) => ({
+  if (!props.chartData || !Array.isArray(props.chartData.data)) return [];
+  return props.chartData.data.map((item: any) => ({
     name: item.name,
     data: item.data
   }));
 });
 
+// ✅ Dynamic chart options
 const options = computed(() => {
   const isMobile = screenSize.value === 'mobile';
-  const isTablet = screenSize.value === 'tablet';
 
   return {
     chart: {
       type: "bar",
       stacked: true,
-      toolbar: { show: !isMobile }, // Hide toolbar on mobile
+      toolbar: { show: !isMobile },
       zoom: { enabled: false },
       fontFamily: 'inherit',
     },
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: isMobile ? "70%" : "55%", // Wider bars on mobile
+        columnWidth: isMobile ? "70%" : "55%",
         endingShape: "rounded",
       },
     },
@@ -68,17 +72,17 @@ const options = computed(() => {
       width: 2,
       colors: ["transparent"],
     },
+    // ✅ Use backend months dynamically
     xaxis: {
-      categories: [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-      ],
+      categories: props.chartData?.months?.length
+        ? props.chartData.months
+        : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
       labels: {
         style: {
           fontSize: isMobile ? '10px' : '12px',
           fontFamily: 'inherit',
         },
-        rotate: isMobile ? -45 : 0, // Rotate labels on mobile for better fit
+        rotate: isMobile ? -45 : 0,
       },
     },
     yaxis: {
@@ -87,19 +91,19 @@ const options = computed(() => {
         style: {
           fontSize: isMobile ? '11px' : '12px',
           fontFamily: 'inherit',
-        }
+        },
       },
       labels: {
         style: {
           fontSize: isMobile ? '10px' : '12px',
           fontFamily: 'inherit',
         },
-        formatter: function(val: number) {
+        formatter: function (val: number) {
           if (isMobile && val >= 1000) {
-            return '$' + (val / 1000).toFixed(0) + 'K'; // Compact format for mobile
+            return '$' + (val / 1000).toFixed(0) + 'K';
           }
           return '$' + val;
-        }
+        },
       },
     },
     fill: {
@@ -111,99 +115,46 @@ const options = computed(() => {
       fontSize: isMobile ? '11px' : '12px',
       itemMargin: {
         horizontal: isMobile ? 8 : 12,
-        vertical: isMobile ? 4 : 8
+        vertical: isMobile ? 4 : 8,
       },
       markers: {
         width: isMobile ? 10 : 12,
         height: isMobile ? 10 : 12,
         radius: isMobile ? 4 : 6,
       },
-      onItemClick: {
-        toggleDataSeries: true
-      },
-      onItemHover: {
-        highlightDataSeries: true
-      },
     },
     tooltip: {
       y: {
-        formatter: function(val: number) {
+        formatter: function (val: number) {
           return "$" + val.toLocaleString();
-        }
+        },
       },
       style: {
         fontSize: isMobile ? '12px' : '14px',
         fontFamily: 'inherit',
-      }
+      },
     },
     grid: {
       borderColor: '#e5e7eb',
       strokeDashArray: isMobile ? 2 : 4,
       xaxis: {
-        lines: {
-          show: false
-        }
+        lines: { show: false },
       },
       yaxis: {
-        lines: {
-          show: true
-        }
-      }
+        lines: { show: true },
+      },
     },
-    responsive: [{
-      breakpoint: 640,
-      options: {
-        chart: {
-          toolbar: {
-            show: false
-          }
-        },
-        legend: {
-          position: 'bottom',
-          horizontalAlign: 'center',
-          fontSize: '11px',
-          itemMargin: {
-            horizontal: 8,
-            vertical: 4
-          }
-        },
-        xaxis: {
-          labels: {
-            rotate: -45,
-            style: {
-              fontSize: '10px'
-            }
-          }
-        },
-        yaxis: {
-          labels: {
-            style: {
-              fontSize: '10px'
-            },
-            formatter: function(val: number) {
-              if (val >= 1000) {
-                return '$' + (val / 1000).toFixed(0) + 'K';
-              }
-              return '$' + val;
-            }
-          }
-        }
-      }
-    }],
     theme: {
       mode: document.documentElement.classList.contains("dark") ? "dark" : "light",
     },
     dataLabels: {
-      enabled: false
+      enabled: false,
     },
     states: {
       hover: {
-        filter: {
-          type: 'lighten',
-          value: 0.1
-        }
-      }
-    }
+        filter: { type: 'lighten', value: 0.1 },
+      },
+    },
   };
 });
 </script>
@@ -213,6 +164,7 @@ const options = computed(() => {
     <h2 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 px-2 sm:px-0 text-center sm:text-left">
       Sales by Product Category
     </h2>
+
     <div class="relative">
       <apexchart
         type="bar"
@@ -222,7 +174,7 @@ const options = computed(() => {
         class="w-full"
       />
 
-      <!-- Loading/Empty state -->
+      <!-- Loading / Empty state -->
       <div
         v-if="series.length === 0"
         class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90"
@@ -238,12 +190,11 @@ const options = computed(() => {
 </template>
 
 <style scoped>
-/* Ensure chart container is responsive */
 :deep(.apexcharts-canvas) {
   width: 100% !important;
 }
 
-/* Improve touch targets on mobile */
+/* Mobile chart tweaks */
 @media (max-width: 640px) {
   :deep(.apexcharts-menu) {
     padding: 8px;

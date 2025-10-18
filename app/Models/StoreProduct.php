@@ -36,6 +36,13 @@ class StoreProduct extends Model
         return $this->hasMany(StoreStockMovement::class, 'store_product_id', 'id');
     }
 
+    public function storeOrderItems()
+    {
+        return $this->hasMany(StoreOrderItem::class, 'store_product_id', 'id');
+    }
+
+
+
     /*----------------------------------------
     * Accessors
     ----------------------------------------*/
