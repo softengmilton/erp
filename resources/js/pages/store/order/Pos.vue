@@ -4,6 +4,7 @@ import { Head, router } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
 import { formatCurrency } from "@/utils/helper";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+import InvoicePrint from "./Components/InvoicePrint.vue";
 
 // Initialize store settings
 initStoreSetting();
@@ -26,6 +27,7 @@ const showPaymentDropdown = ref(false);
 const discountPercentage = ref(0);
 const adjustmentAmount = ref(0);
 const paidAmount = ref(0);
+const invoiceRef = ref(null);
 
 const stockSearchQuery = ref("INV-" + new Date().getFullYear() + "-");
 const showStockDropdown = ref(false);
@@ -181,6 +183,7 @@ function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
 //
+<<<<<<< Updated upstream
 
 function printInvoice() {
   const printWindow = window.open("", "_blank");
@@ -335,6 +338,9 @@ function printInvoice() {
 }
 //
 
+=======
+
+>>>>>>> Stashed changes
 function submitOrder() {
   if (cartItems.value.length === 0) return;
 
@@ -357,7 +363,7 @@ function submitOrder() {
   router.post("pos", orderData, {
     preserveScroll: true,
     onSuccess: () => {
-      printInvoice();
+      invoiceRef.value.show();
       cartItems.value = [];
       discountPercentage.value = 0;
       adjustmentAmount.value = 0;
@@ -453,6 +459,17 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
 <template>
   <Head title="POS" />
 
+  <!-- Hidden invoice component -->
+  <InvoicePrint
+    ref="invoiceRef"
+    :items="cartItems"
+    :customer="selectedCustomer"
+    :total="cartTotal"
+    :paid="paidAmount"
+    :due="dueAmount"
+    :payment-method="selectedPaymentMethod"
+    :payment-methods="paymentMethods"
+  />
   <AppLayout :breadcrumbs="breadcrumbs">
     <!-- Top Header -->
     <div
@@ -757,7 +774,6 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
               paymentMethods.find((p) => p.id === selectedPaymentMethod).name
             }})
           </button>
-
           <!-- Payment Method Dropdown -->
           <div
             v-if="showPaymentDropdown"
@@ -1170,3 +1186,11 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
     </div>
   </AppLayout>
 </template>
+<style>
+.invoice {
+  position: absolute;
+  left: -9999px; /* hidden offscreen */
+  width: 500px;
+  font-family: monospace;
+}
+</style>
