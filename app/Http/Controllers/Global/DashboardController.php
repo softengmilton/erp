@@ -10,53 +10,58 @@ use App\Models\StoreExpense;
 use App\Models\StoreProductType;
 use App\Models\StoreOrderItem;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // Get date ranges
+        // Date ranges
         $todayStart = Carbon::today()->startOfDay();
         $todayEnd = Carbon::today()->endOfDay();
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
 
-        // Use single queries with conditional aggregates for better performance
-        $salesData = StoreOrder::selectRaw('
-            SUM(CASE WHEN created_at BETWEEN ? AND ? THEN total_amount ELSE 0 END) as today_sales,
-            SUM(CASE WHEN created_at BETWEEN ? AND ? THEN total_amount ELSE 0 END) as month_sales,
-            SUM(CASE WHEN due_amount > 0 THEN due_amount ELSE 0 END) as total_due
-        ', [$todayStart, $todayEnd, $monthStart, $monthEnd])->first();
+        // SALES
+        $todaySales = StoreOrder::whereBetween('created_at', [$todayStart, $todayEnd])
+            ->sum('total_amount');
 
-        // Get expenses (operational expenses + product costs)
+        $monthSales = StoreOrder::whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('total_amount');
+
+        $totalDue = StoreOrder::where('due_amount', '>', 0)->sum('due_amount');
+
+        // EXPENSES
         $expensesData = $this->getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd);
 
-        // Get product count
+        // PRODUCT COUNT
         $productCount = StoreStockItem::where('quantity', '>', 0)
             ->distinct('store_product_id')
             ->count('store_product_id');
 
-        // Calculate revenue (sales - all expenses including product costs)
-        $todayRevenue = ($salesData->today_sales ?? 0) - ($expensesData['today'] ?? 0);
-        $monthRevenue = ($salesData->month_sales ?? 0) - ($expensesData['month'] ?? 0);
+        // REVENUE
+        $todayRevenue = $todaySales - ($expensesData['today'] ?? 0);
+        $monthRevenue = $monthSales - ($expensesData['month'] ?? 0);
 
-        // Get monthly data for charts with a single query
+        // CHART DATA
         $monthlyChartData = $this->getMonthlyChartData();
         $salesByTypeData = $this->getSalesByTypeData($monthStart, $monthEnd);
 
-        // Prepare data for frontend
+        // FRONTEND DATA
         $widgets = [
             'sales' => [
-                'today' => $salesData->today_sales ?? 0,
-                'month' => $salesData->month_sales ?? 0
+                'today' => $todaySales,
+                'month' => $monthSales
             ],
             'revenue' => [
                 'today' => $todayRevenue,
                 'month' => $monthRevenue
             ],
             'products' => $productCount,
-            'due' => $salesData->total_due ?? 0
+            'due' => $totalDue,
+            'sale_assets' => [
+                'buy_price' => $this->availableAssetsBuyPrice(),
+                'sale_price' => $this->availableAssetsSalePrice(),
+            ],
         ];
 
         return Inertia::render('global/Dashboard', [
@@ -68,102 +73,59 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get expenses data including operational expenses and product costs
+     * Get expenses data including operational and product costs
      */
     private function getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd)
     {
-        // Get operational expenses
-        $operationalExpenses = StoreExpense::selectRaw('
-            SUM(CASE WHEN created_at BETWEEN ? AND ? THEN amount ELSE 0 END) as today_operational,
-            SUM(CASE WHEN created_at BETWEEN ? AND ? THEN amount ELSE 0 END) as month_operational
-        ', [$todayStart, $todayEnd, $monthStart, $monthEnd])->first();
+        // Operational expenses
+        $todayOperational = StoreExpense::whereBetween('created_at', [$todayStart, $todayEnd])->sum('amount');
+        $monthOperational = StoreExpense::whereBetween('created_at', [$monthStart, $monthEnd])->sum('amount');
 
-        // Get product costs (cost of goods sold)
-        $productCosts = StoreOrderItem::join('store_orders', 'store_order_items.store_order_id', '=', 'store_orders.id')
-            ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
-            ->selectRaw('
-                SUM(CASE WHEN store_orders.created_at BETWEEN ? AND ? THEN store_stock_items.unit_cost * store_order_items.quantity ELSE 0 END) as today_product_costs,
-                SUM(CASE WHEN store_orders.created_at BETWEEN ? AND ? THEN store_stock_items.unit_cost * store_order_items.quantity ELSE 0 END) as month_product_costs
-            ', [$todayStart, $todayEnd, $monthStart, $monthEnd])
-            ->first();
+        // Product costs (COGS)
+        $todayProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($todayStart, $todayEnd) {
+            $q->whereBetween('created_at', [$todayStart, $todayEnd]);
+        })
+            ->get()
+            ->sum(fn($item) => $item->quantity * optional($item->stockItem)->unit_cost);
+
+        $monthProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($monthStart, $monthEnd) {
+            $q->whereBetween('created_at', [$monthStart, $monthEnd]);
+        })
+            ->get()
+            ->sum(fn($item) => $item->quantity * optional($item->stockItem)->unit_cost);
 
         return [
-            'today' => ($operationalExpenses->today_operational ?? 0) + ($productCosts->today_product_costs ?? 0),
-            'month' => ($operationalExpenses->month_operational ?? 0) + ($productCosts->month_product_costs ?? 0)
+            'today' => $todayOperational + $todayProductCosts,
+            'month' => $monthOperational + $monthProductCosts,
         ];
     }
 
     /**
-     * Get monthly revenue and expenses data for the area chart
+     * Get monthly revenue and expenses for last 12 months
      */
     private function getMonthlyChartData()
     {
         $monthlyData = [
+            'months' => [],
             'revenue' => [],
-            'expenses' => [],
-            'months' => []
+            'expenses' => []
         ];
 
-        // Get sales data for the last 12 months
-        $salesData = DB::table('store_orders')
-            ->selectRaw('
-                YEAR(created_at) as year,
-                MONTH(created_at) as month,
-                SUM(total_amount) as total_sales
-            ')
-            ->where('created_at', '>=', Carbon::now()->subMonths(11)->startOfMonth())
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get()
-            ->keyBy(function ($item) {
-                return $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
-            });
-
-        // Get operational expenses for the last 12 months
-        $operationalExpensesData = DB::table('store_expenses')
-            ->selectRaw('
-                YEAR(created_at) as year,
-                MONTH(created_at) as month,
-                SUM(amount) as total_operational_expenses
-            ')
-            ->where('created_at', '>=', Carbon::now()->subMonths(11)->startOfMonth())
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get()
-            ->keyBy(function ($item) {
-                return $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
-            });
-
-        // Get product costs for the last 12 months
-        $productCostsData = DB::table('store_order_items')
-            ->join('store_orders', 'store_order_items.store_order_id', '=', 'store_orders.id')
-            ->join('store_stock_items', 'store_order_items.store_product_id', '=', 'store_stock_items.store_product_id')
-            ->selectRaw('
-                YEAR(store_orders.created_at) as year,
-                MONTH(store_orders.created_at) as month,
-                SUM(store_stock_items.unit_cost * store_order_items.quantity) as total_product_costs
-            ')
-            ->where('store_orders.created_at', '>=', Carbon::now()->subMonths(11)->startOfMonth())
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get()
-            ->keyBy(function ($item) {
-                return $item->year . '-' . str_pad($item->month, 2, '0', STR_PAD_LEFT);
-            });
-
-        // Fill the data for each month
         for ($i = 11; $i >= 0; $i--) {
-            $date = Carbon::now()->subMonths($i);
-            $monthKey = $date->format('Y-m');
-            $monthName = $date->format('M');
+            $start = Carbon::now()->subMonths($i)->startOfMonth();
+            $end = Carbon::now()->subMonths($i)->endOfMonth();
+            $monthName = $start->format('M');
 
-            $sales = $salesData->get($monthKey)->total_sales ?? 0;
-            $operationalExpenses = $operationalExpensesData->get($monthKey)->total_operational_expenses ?? 0;
-            $productCosts = $productCostsData->get($monthKey)->total_product_costs ?? 0;
-            $totalExpenses = $operationalExpenses + $productCosts;
+            $sales = StoreOrder::whereBetween('created_at', [$start, $end])->sum('total_amount');
+            $operational = StoreExpense::whereBetween('created_at', [$start, $end])->sum('amount');
+
+            $productCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($start, $end) {
+                $q->whereBetween('created_at', [$start, $end]);
+            })
+                ->get()
+                ->sum(fn($item) => $item->quantity * optional($item->stockItem)->unit_cost);
+
+            $totalExpenses = $operational + $productCosts;
 
             $monthlyData['months'][] = $monthName;
             $monthlyData['revenue'][] = $sales - $totalExpenses;
@@ -174,52 +136,120 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get sales data by product type for the stacked column chart
+     * Get sales by product type
      */
-    private function getSalesByTypeData($monthStart, $monthEnd)
+    /**
+     * Get sales by product type for the last 12 months
+     */
+    private function getSalesByTypeData()
     {
+        $startWindow = now()->subMonths(11)->startOfMonth();
+        $endWindow = now()->endOfMonth();
+
+        $months = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $months[] = now()->subMonths($i)->format('M');
+        }
+
         $salesByType = [];
 
-        // Get sales by product type with a single optimized query
-        $typeSales = StoreOrderItem::join('store_orders', 'store_order_items.store_order_id', '=', 'store_orders.id')
-            ->join('store_products', 'store_order_items.store_product_id', '=', 'store_products.id')
-            ->join('store_product_types', 'store_products.store_product_type_id', '=', 'store_product_types.id')
-            ->whereBetween('store_orders.created_at', [$monthStart, $monthEnd])
-            ->selectRaw('
-                store_product_types.id as type_id,
-                store_product_types.name as type_name,
-                SUM(store_order_items.sale_price) as total_sales
-            ')
-            ->groupBy('store_product_types.id', 'store_product_types.name')
-            ->get();
+        $types = \App\Models\StoreProductType::all();
 
-        // Prepare data for chart
-        foreach ($typeSales as $type) {
+        foreach ($types as $type) {
+            $productIds = \App\Models\StoreProduct::where('store_product_type_id', $type->id)
+                ->pluck('id')
+                ->toArray();
+
+            $monthlySales = array_fill(0, 12, 0);
+
+            $orderItems = \App\Models\StoreOrderItem::whereIn('store_product_id', $productIds)
+                ->whereHas('storeOrder', function ($q) use ($startWindow, $endWindow) {
+                    $q->whereBetween('created_at', [$startWindow, $endWindow]);
+                })
+                ->with('storeOrder:id,created_at')
+                ->get();
+
+            foreach ($orderItems as $item) {
+                $orderDate = \Carbon\Carbon::parse($item->storeOrder->created_at);
+                $monthIndex = $startWindow->diffInMonths($orderDate);
+                if ($monthIndex >= 0 && $monthIndex < 12) {
+                    $monthlySales[$monthIndex] += $item->sale_price * $item->quantity;
+                }
+            }
+
             $salesByType[] = [
-                'name' => $type->type_name,
-                'data' => $this->distributeSalesByMonth($type->total_sales)
+                'name' => $type->name,
+                'data' => $monthlySales
             ];
         }
 
-        return $salesByType;
+        return [
+            'months' => $months,
+            'data' => $salesByType
+        ];
     }
 
     /**
-     * Distribute sales evenly across 12 months for chart display
+     * Calculate total available assets buy price
      */
-    private function distributeSalesByMonth($totalSales)
+    public function availableAssetsBuyPrice()
     {
-        $monthlyData = array_fill(0, 12, 0);
+        $totalBuyPrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
+            ->get()
+            ->flatMap(function ($product) {
+                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
+                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
 
-        if ($totalSales > 0) {
-            $average = $totalSales / 12;
-            for ($i = 0; $i < 12; $i++) {
-                // Add some variation to make it look more natural
-                $variation = rand(-20, 20) / 100; // ±20% variation
-                $monthlyData[$i] = round($average * (1 + $variation));
-            }
-        }
+                    // Calculate sold quantity for this invoice
+                    $soldQty = $product->storeStockMovements
+                        ->where('source_type', 'sale')
+                        ->where('storeStock.invoice_number', $invoiceNumber)
+                        ->sum('change_quantity');
 
-        return $monthlyData;
+                    $quantity = $purchase->change_quantity;
+                    $sourceData = is_array($purchase->source_data) ? $purchase->source_data : json_decode($purchase->source_data ?? '{}', true);
+                    $unitCost = $sourceData['unit_cost'] ?? 0;
+                    $shipping = $sourceData['shipping'] ?? 0;
+                    $fees = $sourceData['fees'] ?? 0;
+
+                    $availableStock = max(0, $quantity - $soldQty);
+                    $costPerProduct = $unitCost + $shipping + $fees;
+
+                    return $availableStock * $costPerProduct;
+                });
+            })
+            ->sum();
+
+        return $totalBuyPrice;
+    }
+
+    /**
+     * Calculate total available assets sale price
+     */
+    public function availableAssetsSalePrice()
+    {
+        $totalSalePrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
+            ->get()
+            ->flatMap(function ($product) {
+                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
+                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+
+                    // Calculate sold quantity for this invoice
+                    $soldQty = $product->storeStockMovements
+                        ->where('source_type', 'sale')
+                        ->where('storeStock.invoice_number', $invoiceNumber)
+                        ->sum('change_quantity');
+
+                    $quantity = $purchase->change_quantity;
+                    $availableStock = max(0, $quantity - $soldQty);
+
+                    $salePrice = $purchase->storeStockItem->sale_price ?? 0;
+
+                    return $availableStock * $salePrice;
+                });
+            })
+            ->sum();
+
+        return $totalSalePrice;
     }
 }

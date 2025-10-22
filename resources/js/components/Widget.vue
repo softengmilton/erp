@@ -14,6 +14,6 @@ const props = defineProps({
   >
     <slot name="icon" />
     <h3 class="mt-2 text-center font-semibold">{{ title }}</h3>
-    <p v-if="value" class="mt-1 text-xl font-bold">{{ value }}</p>
+    <p v-if="value" class="mt-1 text-xl font-bold"> <span class="text-2xl font-bold">৳</span>{{ value }}</p>
   </div>
 </template>

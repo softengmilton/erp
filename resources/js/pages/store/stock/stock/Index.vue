@@ -136,7 +136,7 @@ const breadcrumbs = [{ title: "Stocks", href: "/store/stocks" }];
                 {{ stock.supplier_name || "-" }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                 ${{ Number(stock.total_cost || 0).toFixed(2) }}
+                ৳{{ Number(stock.total_cost || 0).toFixed(2) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 {{ stock.total_quantity }}

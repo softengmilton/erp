@@ -243,6 +243,12 @@ const settings = StoreSetting.all.value;
         <p><strong>Grand Total:</strong> $${formatCurrency(grandTotal.value)}</p>
 
         <p style="margin-top:20px;"><strong>Notes:</strong><br/>${form.note ?? "-"}</p>
+               <div class="footer">
+            <p>Thank you for your business!</p>
+            <p style="margin-top:8px; font-size:11px; color:#999;">
+                Powered by <a href="https://infinityflamesoft.com/" target="_blank" style="color:#0d9488; text-decoration:none;">Infinity Flame Soft</a>
+            </p>
+        </div>
       </body>
     </html>
   `);

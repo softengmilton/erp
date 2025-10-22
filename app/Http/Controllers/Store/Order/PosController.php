@@ -14,74 +14,52 @@ class PosController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index(Request $request)
     {
         try {
-            // Only update if new value sent
-            if ($request->filled('stock_number')) {
-                Session::put('stock_number', $request->input('stock_number'));
-            }
+            $stocks = \App\Models\StoreStock::with([
+                'storeStockItems.storeProduct.storeProductType.primaryImage'
+            ])->orderByDesc('id')->get();
 
-            $stock = Session::get('stock_number');
 
-            // Load the stock based on session or fallback to latest
-            if (!$stock) {
-                $stock = \App\Models\StoreStock::with([
-                    'storeStockItems.storeProduct.storeProductType.primaryImage'
-                ])->latest()->first();
-            } else {
-                $stock = \App\Models\StoreStock::with([
-                    'storeStockItems.storeProduct.storeProductType.primaryImage'
-                ])->where('invoice_number', $stock)->first();
-            }
+            $stockNumbers = $stocks->pluck('invoice_number')->toArray();
+            $productIds   = $stocks->flatMap(fn($stock) => $stock->storeStockItems->pluck('store_product_id'))->unique()->toArray();
 
-            // If no stock found, redirect
-            if (!$stock) {
-                return Redirect::back()->with('toast', [
-                    'type' => 'error',
-                    'message' => 'No stock found.',
-                ]);
-            }
-
-            // Get all stock invoice numbers
-            $stockNumbers = \App\Models\StoreStock::pluck('invoice_number')->toArray();
-
-            // Get product IDs from stock items
-            $stockItemIds = $stock->storeStockItems->pluck('store_product_id');
-
-            // Load stock movements for sales and group by product
-            $movements = \App\Models\StoreStockMovement::where('store_stock_id', $stock->id)
-                ->whereIn('store_product_id', $stockItemIds)
+            $movements = \App\Models\StoreStockMovement::whereIn('store_product_id', $productIds)
                 ->where('source_type', 'sale')
                 ->get()
                 ->groupBy('store_product_id');
 
-            // Calculate current quantity for each item
-            foreach ($stock->storeStockItems as $item) {
-                $soldQty = $movements->get($item->store_product_id, collect())->sum('change_quantity');
-                $item->current_quantity = $item->quantity - $soldQty;
+            // Attach current quantities and filter out sold-out items
+            foreach ($stocks as $stock) {
+                $stock->storeStockItems = $stock->storeStockItems->map(function ($item) use ($movements) {
+                    $soldQty = $movements->get($item->store_product_id, collect())->sum('change_quantity');
+                    $item->current_quantity = $item->quantity - $soldQty;
+                    return $item;
+                })->filter(function ($item) {
+                    return $item->current_quantity > 0; // keep only items still in stock
+                })->values();
             }
 
-            // Get product type IDs used in current stock items
-            $productTypeIds = $stock->storeStockItems
-                ->pluck('storeProduct.store_product_type_id')
-                ->unique()
-                ->filter()
-                ->values();
+            // Remove empty stocks (no items left)
+            $stocks = $stocks->filter(fn($stock) => $stock->storeStockItems->isNotEmpty())->values();
 
-            // Fetch product types related to current stock, with image
+            $productTypeIds = $stocks->flatMap(
+                fn($stock) => $stock->storeStockItems
+                    ->pluck('storeProduct.store_product_type_id')
+            )->unique()->filter()->values();
+
             $productTypes = \App\Models\StoreProductType::with('primaryImage')
                 ->select('id', 'name')
                 ->whereIn('id', $productTypeIds)
                 ->get();
 
-            $customers = \App\Models\Customer::select('id', 'name', 'phone', 'email')
-                ->get();
+            $customers = \App\Models\Customer::select('id', 'name', 'phone', 'email')->get();
 
-            // Return data to Vue via Inertia
             return Inertia::render('store/order/Pos', [
                 'stockNumbers' => $stockNumbers,
-                'stock' => $stock,
+                'stocks' => $stocks, // now only contains items in stock
                 'productTypes' => $productTypes,
                 'customers' => $customers,
             ]);
@@ -92,6 +70,7 @@ class PosController extends Controller
             ]);
         }
     }
+
 
 
     /**
@@ -116,7 +95,6 @@ class PosController extends Controller
             'due' => 'required|numeric|min:0',
             'discount' => 'required|numeric|min:0',
             'adjustment' => 'required|numeric',
-            'stock_number' => 'required|exists:store_stocks,invoice_number',
             'customer_id' => 'nullable|exists:customers,id',
         ]);
 
@@ -145,6 +123,7 @@ class PosController extends Controller
                 $order->storeOrderItems()->create([
                     'store_product_id' => $stockItem->store_product_id,
                     'store_stock_id' => $stockItem->store_stock_id,
+                    'store_stock_item_id' => $stockItem->id,
                     'quantity' => $item['quantity'],
                     'sale_price' => $stockItem->sale_price,
                 ]);
@@ -152,6 +131,7 @@ class PosController extends Controller
                 // Record stock movement
                 \App\Models\StoreStockMovement::create([
                     'store_stock_id' => $stockItem->store_stock_id,
+                    'store_stock_item_id' => $stockItem->id,
                     'store_product_id' => $stockItem->store_product_id,
                     'change_quantity' => $item['quantity'], // Negative for sales
                     'source_type' => 'sale',

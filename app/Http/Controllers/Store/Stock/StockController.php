@@ -126,6 +126,7 @@ class StockController extends Controller
                 // Record stock movement as purchase
                 \App\Models\StoreStockMovement::create([
                     'store_stock_id'   => $stockItem->store_stock_id,
+                    'store_stock_item_id' => $stockItem->id,
                     'store_product_id' => $stockItem->store_product_id,
                     'change_quantity'  => $stockItem->quantity, // positive inflow
                     'source_type'      => 'purchase',

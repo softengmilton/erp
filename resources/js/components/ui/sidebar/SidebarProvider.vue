@@ -72,10 +72,24 @@ provideSidebarContext({
         '--sidebar-width': SIDEBAR_WIDTH,
         '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
       }"
-      :class="cn('group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full', props.class)"
+      :class="
+        cn(
+          'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
+          props.class
+        )
+      "
       v-bind="$attrs"
     >
       <slot />
+    </div>
+    <div class="align-center text-center py-4 bg-gray-100 text-gray-600 text-sm">
+      &copy; 2025
+      <a
+        href="https://infinityflamesoft.com/"
+        class="text-blue-500 hover:text-blue-600 hover:underline"
+      >
+        Infinity Flame Soft </a
+      >. All rights reserved.
     </div>
   </TooltipProvider>
 </template>

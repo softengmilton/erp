@@ -107,7 +107,7 @@ class ProductController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|max:255|unique:store_products,name,' . $id,
-                'barcode' => 'required',
+                'barcode' => 'nullable',
                 'description' => 'nullable',
                 'unit' => 'required',
                 'low_stock_alert' => 'required',

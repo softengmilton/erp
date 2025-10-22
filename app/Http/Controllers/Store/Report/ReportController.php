@@ -15,7 +15,7 @@ class ReportController extends Controller
      */
     /**
      * Display summary report.
-     * 
+     *
      *
      */
     public function index(Request $request)
@@ -81,7 +81,7 @@ class ReportController extends Controller
         // Expenses (exclude "asset")
         $expenses = DB::table('store_expenses')
             ->join('store_expense_types', 'store_expenses.store_expense_type_id', '=', 'store_expense_types.id')
-            ->where('store_expense_types.name', '<>', 'assets')
+            ->where('store_expense_types.name', '<>', 'Assets')
             ->select(
                 DB::raw('DATE(store_expenses.created_at) as order_date'),
                 DB::raw('SUM(store_expenses.amount) as expense_amount')
