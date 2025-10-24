@@ -34,13 +34,20 @@ class PosController extends Controller
             // Attach current quantities and filter out sold-out items
             foreach ($stocks as $stock) {
                 $stock->storeStockItems = $stock->storeStockItems->map(function ($item) use ($movements) {
-                    $soldQty = $movements->get($item->store_product_id, collect())->sum('change_quantity');
+                    // Get all sales for this specific stock item
+                    $soldQty = $movements->get($item->store_product_id, collect())
+                        ->where('store_stock_id', $item->store_stock_id)
+                        ->sum('change_quantity');
+
+                    $item->sold_quantity = $soldQty; // Add sold quantity for reporting
                     $item->current_quantity = $item->quantity - $soldQty;
+
                     return $item;
                 })->filter(function ($item) {
                     return $item->current_quantity > 0; // keep only items still in stock
                 })->values();
             }
+
 
             // Remove empty stocks (no items left)
             $stocks = $stocks->filter(fn($stock) => $stock->storeStockItems->isNotEmpty())->values();
