@@ -230,7 +230,6 @@ function applyAdjustment() {
   showAdjustmentDropdown.value = false;
 }
 
-
 function submitOrder() {
   if (cartItems.value.length === 0) return;
   // please give quantity more than 0 and if 0 remove that item from cart
@@ -353,13 +352,13 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
   <!-- Hidden invoice component -->
   <InvoicePrint
     ref="invoiceRef"
+    :store-info="StoreSetting.all.value"
     :items="cartItems"
     :customer="selectedCustomer"
     :total="cartTotal"
     :paid="paidAmount"
     :due="dueAmount"
     :payment-method="selectedPaymentMethod"
-    :payment-methods="paymentMethods"
   />
   <AppLayout :breadcrumbs="breadcrumbs">
     <!-- Top Header -->
