@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Report;
 use App\Http\Controllers\Controller;
 use App\Models\StoreProduct;
 use App\Models\StoreProductType;
+use App\Models\StoreStockItem;
 use App\Models\StoreStockMovement;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +17,6 @@ class StockProductReportController extends Controller
      */
     public function index(Request $request)
     {
-
         // Get category and product IDs from user input
         $selectedCatId = $request->input('category_id');
         $selectedProductId = $request->input('product_id');
@@ -35,8 +35,8 @@ class StockProductReportController extends Controller
         // Determine which product ID to use
         $productId = $selectedProductId ?? StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
 
-        // Get all purchase movements
-        $stockMovements = StoreStockMovement::with(['storeProduct', 'storeStock', 'storeStockItem'])
+        // Get all purchase movements (without storeStockItem)
+        $stockMovements = StoreStockMovement::with(['storeProduct', 'storeStock'])
             ->where('source_type', 'purchase')
             ->where('store_product_id', $productId)
             ->get(['id', 'store_stock_id', 'store_product_id', 'change_quantity', 'source_data']);
@@ -49,59 +49,152 @@ class StockProductReportController extends Controller
             ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A')
             ->map(fn ($group) => $group->sum('change_quantity'));
 
-        // Map purchase data and safely merge with sale data
-        $tableData = $stockMovements->map(function ($item) use ($soldPerInvoice) {
-            $invoiceNumber = $item->storeStock->invoice_number ?? 'N/A';
+        // Prepare dynamic sale price, sale price asset, and sold product price
+        $dynamicSalePrice = 0;
+        $dynamicSaleAsset = 0;
+        $dynamicSoldProductPrice = 0;
+        $totalSoldQty = 0;
 
+        // Get all stock items for this product grouped by invoice number
+        $stockItemsByInvoice = StoreStockItem::where('store_product_id', $productId)
+            ->with('storeStock')
+            ->get()
+            ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A');
+
+        // Compute per-invoice meta details
+        // Compute per-invoice meta details
+        $invoiceMetaData = $stockItemsByInvoice->map(function ($items, $invoice) {
+            $latest = $items->sortByDesc('id')->first();
+            $meta = json_decode($latest->price_meta, true) ?? [];
+
+            $dynamicSoldProductPrice = 0;
+
+            // Local array for max quantity per price for THIS invoice
+            $priceMaxQty = [];
+
+            // Recursive decode for previous chain
+            $decodeMetaChain = function ($meta) use (&$decodeMetaChain, &$priceMaxQty) {
+                if (! is_array($meta)) {
+                    $decoded = json_decode($meta, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $meta = $decoded;
+                    } else {
+                        return;
+                    }
+                }
+
+                if (isset($meta['quantity_sold'], $meta['old_price'])) {
+                    $price = (float) $meta['old_price'];
+                    $qty = (float) $meta['quantity_sold'];
+
+                    // Only keep the highest quantity sold for the same old price
+                    if (! isset($priceMaxQty[$price]) || $qty > $priceMaxQty[$price]) {
+                        $priceMaxQty[$price] = $qty;
+                    }
+                }
+
+                if (isset($meta['previous']) && $meta['previous']) {
+                    $decodeMetaChain($meta['previous']);
+                }
+            };
+
+            $decodeMetaChain($meta);
+
+            // Calculate dynamicSoldProductPrice per invoice
+            $dynamicSoldProductPrice = 0;
+            foreach ($priceMaxQty as $price => $qty) {
+                $dynamicSoldProductPrice += $price * $qty;
+            }
+
+            // Extract sale price and quantity details
+            $dynamicSalePrice = (float) ($meta['new_price'] ?? $latest->sale_price ?? 0);
+            $totalStock = (float) ($latest->quantity ?? 0);
+
+            // Total sold quantity (sum of max quantities per price)
+            $totalSoldQty = array_sum($priceMaxQty);
+
+            $remainingQty = max(0, $totalStock - $totalSoldQty);
+            $dynamicSaleAsset = $dynamicSoldProductPrice + ($remainingQty * $dynamicSalePrice);
+
+            return [
+                'dynamicSalePrice' => $dynamicSalePrice,
+                'dynamicSaleAsset' => $dynamicSaleAsset,
+                'dynamicSoldProductPrice' => $dynamicSoldProductPrice,
+                'totalSoldQty' => $totalSoldQty,
+            ];
+        });
+
+        // 🟢 Keep the original variables, just set defaults (so no code breaks)
+        $dynamicSalePrice = 0;
+        $dynamicSaleAsset = 0;
+        $dynamicSoldProductPrice = 0;
+        $totalSoldQty = 0;
+
+        // You’ll now use $invoiceMetaData inside your $tableData map
+        $tableData = $stockMovements->map(function ($item) use ($soldPerInvoice, $invoiceMetaData) {
+            $invoiceNumber = $item->storeStock->invoice_number ?? 'N/A';
             $soldQty = $soldPerInvoice[$invoiceNumber] ?? 0;
 
-            $sourceData = is_array($item->source_data) ? $item->source_data : json_decode($item->source_data, true);
+            $meta = $invoiceMetaData[$invoiceNumber] ?? [
+                'dynamicSalePrice' => 0,
+                'dynamicSaleAsset' => 0,
+                'dynamicSoldProductPrice' => 0,
+                'totalSoldQty' => 0,
+            ];
 
+            // Assign per-invoice meta values
+            $dynamicSalePrice = $meta['dynamicSalePrice'];
+            $dynamicSaleAsset = $meta['dynamicSaleAsset'];
+            $dynamicSoldProductPrice = $meta['dynamicSoldProductPrice'];
+            $totalSoldQty = $meta['totalSoldQty'];
+
+            // ✅ Rest of your logic untouched
+            $sourceData = is_array($item->source_data)
+                ? $item->source_data
+                : json_decode($item->source_data, true);
+
+            $slodQtyUpPrice = $soldQty - $totalSoldQty;
             $quantity = $item->change_quantity;
-            $unit_cost = $sourceData['unit_cost'] ?? 0;
+            $unitCost = $sourceData['unit_cost'] ?? 0;
             $shipping = $sourceData['shipping'] ?? 0;
             $fees = $sourceData['fees'] ?? 0;
+            $costingPerProduct = $unitCost + $shipping + $fees;
 
-            $costing_per_product = $unit_cost + $shipping + $fees;
-            $sale_price = $item->storeStockItem->sale_price ?? 0;
-            $profit_per_product = $sale_price - $costing_per_product;
-
-            $buy_price_asset = $quantity * $costing_per_product;
-            $sale_price_asset = $quantity * $sale_price;
-
-            $sold_buy_product_price = $soldQty * $costing_per_product;
-            $sold_product_price = $soldQty * $sale_price;
-            $total_profit_product = $sold_product_price - $sold_buy_product_price;
-
-            $availble_stock = $quantity - $soldQty;
-            $availble_asset_buy_price = $availble_stock * $costing_per_product;
-            $availble_asset_sale_price = $availble_stock * $sale_price;
+            $salePrice = $dynamicSalePrice;
+            $salePriceAsset = $dynamicSaleAsset;
+            $profitPerProduct = $salePrice - $costingPerProduct;
+            $buyPriceAsset = $quantity * $costingPerProduct;
+            $soldBuyProductPrice = $soldQty * $costingPerProduct;
+            $soldProductPrice = $slodQtyUpPrice * $salePrice;
+            $totalSoldProductPrice = $dynamicSoldProductPrice + $soldProductPrice;
+            $totalProfitProduct = $totalSoldProductPrice - $soldBuyProductPrice;
+            $availableStock = $quantity - $soldQty;
+            $availableAssetBuyPrice = $availableStock * $costingPerProduct;
+            $availableAssetSalePrice = $availableStock * $salePrice;
 
             return [
                 'invoice_number' => $invoiceNumber,
                 'product_name' => $item->storeProduct->name ?? 'Unknown',
                 'quantity' => $quantity,
-
-                'unit_cost' => $unit_cost,
+                'unit_cost' => $unitCost,
                 'shipping' => $shipping,
                 'fees' => $fees,
-                'costing_per_product' => $costing_per_product,
-                'sale_price' => $sale_price,
-                'profit_per_product' => $profit_per_product,
-
-                'buy_price_asset' => $buy_price_asset,
-                'sale_price_asset' => $sale_price_asset,
-
+                'costing_per_product' => $costingPerProduct,
+                'sale_price' => $salePrice,
+                'profit_per_product' => $profitPerProduct,
+                'buy_price_asset' => $buyPriceAsset,
+                'sale_price_asset' => $salePriceAsset,
                 'sold_product' => $soldQty,
-                'sold_buy_product_price' => $sold_buy_product_price,
-                'sold_product_price' => $sold_product_price,
-                'total_profit_product' => $total_profit_product,
-
-                'availble_stock' => $availble_stock,
-                'availble_asset_buy_price' => $availble_asset_buy_price,
-                'availble_asset_sale_price' => $availble_asset_sale_price,
+                'sold_buy_product_price' => $soldBuyProductPrice,
+                'sold_product_price' => $totalSoldProductPrice,
+                'total_profit_product' => $totalProfitProduct,
+                'availble_stock' => $availableStock,
+                'availble_asset_buy_price' => $availableAssetBuyPrice,
+                'availble_asset_sale_price' => $availableAssetSalePrice,
             ];
         });
+
+        // dd($tableData);
 
         // Compute totals
         $grands = [
