@@ -9,7 +9,7 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
   const props = defineProps({
       productTypes: Array,
-      products: Array,
+      formattedDate: String,
       tableData: Array,
       grands : Object,
     });
@@ -118,7 +118,7 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
         <body>
           <div class="header">
             <h1>${settings.business_title || "Business"}</h1>
-            <p>Product Name: ${productNamesStr}</p>
+            <p>${props.formattedDate}</p>
           </div>
           ${printContent}
         </body>
@@ -179,7 +179,7 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
           </div>
 
           <!-- Product Selector -->
-          <div class="min-w-[200px]">
+          <!-- <div class="min-w-[200px]">
             <select
               id="product"
               v-model="selectedProduct"
@@ -194,13 +194,22 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
                 {{ product.name }}
               </option>
             </select>
-          </div>
+          </div> -->
         </div>
       </div>
 
       <!-- Report Table -->
       <div class="overflow-x-auto">
+        
+        <div class="inline-flex items-center bg-blue-50 text-blue-800 px-4 py-2 mb-4 rounded-xl shadow-md hover:bg-blue-100 transition-colors duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 8h12v8H4V8z" clip-rule="evenodd" />
+          </svg>
+          <span class="font-semibold text-sm">{{ props.formattedDate }}</span>
+        </div>
+
         <table ref="tableRef" class="min-w-full border-collapse border border-black font-mono text-sm">
+          <!-- <p>{{ props.formattedDate }}</p> -->
           <thead class="bg-gray-100">
             <tr>
               <td class="border px-10 py-2">Invoice Number</td>
@@ -247,7 +256,7 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
               <td class="border px-4 py-2">{{ item.availble_asset_buy_price  }}</td>
               <td class="border px-4 py-2">{{ item.availble_asset_sale_price  }}</td>
             </tr>
-            <tr>
+            <!-- <tr>
               <td class="border px-4 py-2">Grand Total</td>
               <td class="border px-4 py-2"> - </td>
               <td class="border px-4 py-2"> - </td>
@@ -266,7 +275,7 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
               <td class="border px-4 py-2">{{ grands.grand_avaiable_stock }}</td>
               <td class="border px-4 py-2">{{ grands.grand_availble_asset_buy_price }}</td>
               <td class="border px-4 py-2">{{ grands.grand_availble_asset_sale_price }}</td>
-            </tr>
+            </tr> -->
           </tbody>
         </table>
       </div>
