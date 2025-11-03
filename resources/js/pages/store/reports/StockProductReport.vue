@@ -11,7 +11,8 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
       productTypes: Array,
       formattedDate: String,
       tableData: Array,
-      grands : Object,
+      products: Object, // paginator object
+      // grands : Object,
     });
 
 
@@ -33,19 +34,17 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
   });
 
   // Watch product id
-  watch(selectedProduct, (newProductId) => {
-    filterData.value.product_id = newProductId || null;
-    // console.log(newProductId);
-    applyRange();
-
-  });
+  // watch(selectedProduct, (newProductId) => {
+  //   filterData.value.product_id = newProductId || null;
+  //   applyRange();
+  // });
 
   function applyRange() {
     const payload = {};
 
     // only send params that are not null
     if (filterData.value.category_id) payload.category_id = filterData.value.category_id;
-    if (filterData.value.product_id) payload.product_id = filterData.value.product_id;
+    // if (filterData.value.product_id) payload.product_id = filterData.value.product_id;
 
       console.log('Sending payload:', payload); // 👈 add this line
 
@@ -57,7 +56,23 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
       },
     });
+}
+
+// ✅ Handle pagination click (keep category filter)
+function onPageClick(url) {
+  // Preserve category when paginating
+  const payload = {};
+
+  if (filterData.value.category_id) {
+    payload.category_id = filterData.value.category_id;
   }
+
+  router.get(url, payload, {
+    preserveState: true,
+    replace: true,
+  });
+}
+
 
   // Export CSV
   const exportTableToCSV = () => {
@@ -278,6 +293,28 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
             </tr> -->
           </tbody>
         </table>
+      </div>
+
+      <!-- 🧭 Pagination -->
+      <div class="flex justify-center mt-6 space-x-1">
+        <template v-for="(link, i) in props.products.links" :key="i">
+          <button
+            v-if="link.url"
+            @click="onPageClick(link.url)"
+            v-html="link.label"
+            :class="[
+              'px-3 py-1 border rounded',
+              link.active
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            ]"
+          />
+          <span
+            v-else
+            v-html="link.label"
+            class="px-3 py-1 text-gray-400 cursor-not-allowed"
+          />
+        </template>
       </div>
     </div>
   </AppLayout>

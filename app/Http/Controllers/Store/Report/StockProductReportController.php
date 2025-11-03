@@ -18,80 +18,59 @@ class StockProductReportController extends Controller
      */
 
     // Category based
+
     public function index(Request $request)
     {
-
         // Date
-        $today = Carbon::now();
-        $date = Carbon::parse($today);
+        $formattedDate = Carbon::now()->format('d M, Y');
 
-        $formattedDate = $date->format('d M, Y'); // day month_abbr, year
-        // dd($formattedDate);
-
-        // Get category and product IDs from user input
+        // Get category
         $selectedCatId = $request->input('category_id');
-
-        // Get all product categories
         $productTypes = StoreProductType::select('id', 'name')->get();
-
         $categoryId = $selectedCatId ?? StoreProductType::orderBy('id', 'desc')->value('id');
-        // dd($catId);
 
-        $productIddd = StoreProduct::where('store_product_type_id', $categoryId)
-            ->pluck('id');
+        // 🟢 Paginate products (Option 2)
+        $perPage = 3; // change to whatever number of products per page you want
+        $products = StoreProduct::where('store_product_type_id', $categoryId)
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
 
         $allTableData = collect();
-        $allGrands = []; // will hold per-product grand totals
+        $allGrands = [];
 
-        foreach ($productIddd as $productId) {
+        foreach ($products as $product) {
 
-            $product = StoreProduct::find($productId);
+            // skip invalid product
             if (! $product) {
                 continue;
             }
 
-            // Determine which product ID to use
-            // $productId = $productIdd;
-            // $productId = $selectedProductId ?? StoreStockMovement::orderBy('id', 'asc')->value('store_product_id');
-
-            // Get all purchase movements (without storeStockItem)
+            // Get all purchase movements
             $stockMovements = StoreStockMovement::with(['storeProduct', 'storeStock'])
                 ->where('source_type', 'purchase')
-                ->where('store_product_id', $productId)
+                ->where('store_product_id', $product->id)
                 ->get(['id', 'store_stock_id', 'store_product_id', 'change_quantity', 'source_data']);
 
             // Get all sales grouped by invoice
             $soldPerInvoice = StoreStockMovement::with('storeStock')
                 ->where('source_type', 'sale')
-                ->where('store_product_id', $productId)
+                ->where('store_product_id', $product->id)
                 ->get()
                 ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A')
                 ->map(fn ($group) => $group->sum('change_quantity'));
 
-            // Prepare dynamic sale price, sale price asset, and sold product price
-            $dynamicSalePrice = 0;
-            $dynamicSaleAsset = 0;
-            $dynamicSoldProductPrice = 0;
-            $totalSoldQty = 0;
-
-            // Get all stock items for this product grouped by invoice number
-            $stockItemsByInvoice = StoreStockItem::where('store_product_id', $productId)
+            // All stock items for this product grouped by invoice
+            $stockItemsByInvoice = StoreStockItem::where('store_product_id', $product->id)
                 ->with('storeStock')
                 ->get()
                 ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A');
 
-            // Compute per-invoice meta details
-            // Compute per-invoice meta details
+            // Per-invoice meta computation
             $invoiceMetaData = $stockItemsByInvoice->map(function ($items, $invoice) {
                 $latest = $items->sortByDesc('id')->first();
                 $meta = json_decode($latest->price_meta, true) ?? [];
 
-                $dynamicSoldProductPrice = 0;
-
-                // Local array for max quantity per price for THIS invoice
                 $priceMaxQty = [];
-
-                // Recursive decode for previous chain
                 $decodeMetaChain = function ($meta) use (&$decodeMetaChain, &$priceMaxQty) {
                     if (! is_array($meta)) {
                         $decoded = json_decode($meta, true);
@@ -105,8 +84,6 @@ class StockProductReportController extends Controller
                     if (isset($meta['quantity_sold'], $meta['old_price'])) {
                         $price = (float) $meta['old_price'];
                         $qty = (float) $meta['quantity_sold'];
-
-                        // Only keep the highest quantity sold for the same old price
                         if (! isset($priceMaxQty[$price]) || $qty > $priceMaxQty[$price]) {
                             $priceMaxQty[$price] = $qty;
                         }
@@ -119,19 +96,14 @@ class StockProductReportController extends Controller
 
                 $decodeMetaChain($meta);
 
-                // Calculate dynamicSoldProductPrice per invoice
                 $dynamicSoldProductPrice = 0;
                 foreach ($priceMaxQty as $price => $qty) {
                     $dynamicSoldProductPrice += $price * $qty;
                 }
 
-                // Extract sale price and quantity details
                 $dynamicSalePrice = (float) ($meta['new_price'] ?? $latest->sale_price ?? 0);
                 $totalStock = (float) ($latest->quantity ?? 0);
-
-                // Total sold quantity (sum of max quantities per price)
                 $totalSoldQty = array_sum($priceMaxQty);
-
                 $remainingQty = max(0, $totalStock - $totalSoldQty);
                 $dynamicSaleAsset = $dynamicSoldProductPrice + ($remainingQty * $dynamicSalePrice);
 
@@ -143,17 +115,10 @@ class StockProductReportController extends Controller
                 ];
             });
 
-            // 🟢 Keep the original variables, just set defaults (so no code breaks)
-            $dynamicSalePrice = 0;
-            $dynamicSaleAsset = 0;
-            $dynamicSoldProductPrice = 0;
-            $totalSoldQty = 0;
-
-            // You’ll now use $invoiceMetaData inside your $tableData map
+            // Build per-invoice table data
             $tableData = $stockMovements->map(function ($item) use ($soldPerInvoice, $invoiceMetaData) {
                 $invoiceNumber = $item->storeStock->invoice_number ?? 'N/A';
                 $soldQty = $soldPerInvoice[$invoiceNumber] ?? 0;
-
                 $meta = $invoiceMetaData[$invoiceNumber] ?? [
                     'dynamicSalePrice' => 0,
                     'dynamicSaleAsset' => 0,
@@ -161,13 +126,11 @@ class StockProductReportController extends Controller
                     'totalSoldQty' => 0,
                 ];
 
-                // Assign per-invoice meta values
                 $dynamicSalePrice = $meta['dynamicSalePrice'];
                 $dynamicSaleAsset = $meta['dynamicSaleAsset'];
                 $dynamicSoldProductPrice = $meta['dynamicSoldProductPrice'];
                 $totalSoldQty = $meta['totalSoldQty'];
 
-                // ✅ Rest of your logic untouched
                 $sourceData = is_array($item->source_data)
                     ? $item->source_data
                     : json_decode($item->source_data, true);
@@ -213,12 +176,10 @@ class StockProductReportController extends Controller
                 ];
             });
 
-            // Sort this product's tableData by invoice_number descending
-            $tableData = $tableData->sortByDesc(function ($row) {
-                return $row['invoice_number'] ?? 'N/A';
-            })->values();
+            // Sort per-product rows
+            $tableData = $tableData->sortByDesc(fn ($row) => $row['invoice_number'])->values();
 
-            // Compute totals
+            // Product-level totals
             $grands = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
@@ -234,16 +195,13 @@ class StockProductReportController extends Controller
                 'grand_availble_asset_sale_price' => $tableData->sum('availble_asset_sale_price'),
             ];
 
-            // Save per-product grand for the frontend if you want a structured list
             $allGrands[] = $grands;
 
-            // Append this product's rows into the master collection
+            // Combine product rows and grand total row
             $allTableData = $allTableData->concat($tableData);
-
-            // Optionally push a visible "Grand Total" row right after this product's rows
             $allTableData->push([
                 'invoice_number' => "Grand Total ({$product->name})",
-                'product_name' => '-', // or $product->name if you prefer
+                'product_name' => '-',
                 'quantity' => $grands['grand_initial_stock'],
                 'unit_cost' => '-',
                 'shipping' => '-',
@@ -261,14 +219,14 @@ class StockProductReportController extends Controller
                 'availble_asset_buy_price' => $grands['grand_availble_asset_buy_price'],
                 'availble_asset_sale_price' => $grands['grand_availble_asset_sale_price'],
             ]);
-
         }
 
         return Inertia::render('store/reports/StockProductReport', [
             'productTypes' => $productTypes,
             'formattedDate' => $formattedDate,
+            'products' => $products,     // ⬅️ for pagination links
             'tableData' => $allTableData,
-            'grands' => $allGrands,
+            // 'grands' => $allGrands,
         ]);
     }
 
