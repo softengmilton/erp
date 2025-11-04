@@ -30,10 +30,11 @@ class StockProductReportController extends Controller
         $categoryId = $selectedCatId ?? StoreProductType::orderBy('id', 'desc')->value('id');
 
         // 🟢 Paginate products (Option 2)
-        $perPage = 3; // change to whatever number of products per page you want
+        // $perPage = 3; // change to whatever number of products per page you want
         $products = StoreProduct::where('store_product_type_id', $categoryId)
             ->orderBy('id', 'desc')
-            ->paginate($perPage);
+            ->get();
+        // ->paginate($perPage);
 
         $allTableData = collect();
         $allGrands = [];
@@ -221,10 +222,37 @@ class StockProductReportController extends Controller
             ]);
         }
 
+        // 🧮 Final grand total for all products
+        if ($allGrands) {
+            $finalGrand = [
+                'invoice_number' => 'Grand Total (All Products)',
+                'product_name' => '-',
+                'quantity' => collect($allGrands)->sum('grand_initial_stock'),
+                'costing_per_product' => '-',
+                'sale_price' => '-',
+                'buy_price_asset' => collect($allGrands)->sum('grand_buy_price_asset'),
+                'sale_price_asset' => collect($allGrands)->sum('grand_sale_price_asset'),
+                'sold_product' => collect($allGrands)->sum('grand_sold_product'),
+                'sold_buy_product_price' => collect($allGrands)->sum('grand_sold_buy_product_price'),
+                'sold_product_price' => collect($allGrands)->sum('grand_sold_product_price'),
+                'total_profit_product' => collect($allGrands)->sum('grand_profit_product'),
+                'availble_stock' => collect($allGrands)->sum('grand_avaiable_stock'),
+                'availble_asset_buy_price' => collect($allGrands)->sum('grand_availble_asset_buy_price'),
+                'availble_asset_sale_price' => collect($allGrands)->sum('grand_availble_asset_sale_price'),
+            ];
+
+            $allTableData->push($finalGrand);
+        }
+
+        // 🧹 Eliminate rows where available stock = 0
+        // $allTableData = $allTableData->filter(function ($row) {
+        //     return ! isset($row['availble_stock']) || $row['availble_stock'] != 0;
+        // })->values();
+
         return Inertia::render('store/reports/StockProductReport', [
             'productTypes' => $productTypes,
             'formattedDate' => $formattedDate,
-            'products' => $products,     // ⬅️ for pagination links
+            // 'products' => $products,     // ⬅️ for pagination links
             'tableData' => $allTableData,
             // 'grands' => $allGrands,
         ]);

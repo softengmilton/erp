@@ -59,19 +59,19 @@ import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 }
 
 // ✅ Handle pagination click (keep category filter)
-function onPageClick(url) {
-  // Preserve category when paginating
-  const payload = {};
+// function onPageClick(url) {
+//   // Preserve category when paginating
+//   const payload = {};
 
-  if (filterData.value.category_id) {
-    payload.category_id = filterData.value.category_id;
-  }
+//   if (filterData.value.category_id) {
+//     payload.category_id = filterData.value.category_id;
+//   }
 
-  router.get(url, payload, {
-    preserveState: true,
-    replace: true,
-  });
-}
+//   router.get(url, payload, {
+//     preserveState: true,
+//     replace: true,
+//   });
+// }
 
 
   // Export CSV
@@ -296,7 +296,7 @@ function onPageClick(url) {
       </div>
 
       <!-- 🧭 Pagination -->
-      <div class="flex justify-center mt-6 space-x-1">
+      <!-- <div class="flex justify-center mt-6 space-x-1">
         <template v-for="(link, i) in props.products.links" :key="i">
           <button
             v-if="link.url"
@@ -315,7 +315,7 @@ function onPageClick(url) {
             class="px-3 py-1 text-gray-400 cursor-not-allowed"
           />
         </template>
-      </div>
+      </div> -->
     </div>
   </AppLayout>
 </template>
