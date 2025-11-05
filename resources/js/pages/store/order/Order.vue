@@ -10,6 +10,8 @@ const props = defineProps({
   filters: Object,
 });
 
+// console.log(props.orders);
+
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", {
@@ -313,7 +315,7 @@ const breadcrumbs = [
                     View
                   </Link>
                   <button
-                    v-if="order.payment_status === 'due'"
+                    v-if="order.payment_status === 'due' && !order.price_mismatch"
                     @click="cancelOrder(order.id)"
                     class="text-red-600 hover:text-red-900"
                   >

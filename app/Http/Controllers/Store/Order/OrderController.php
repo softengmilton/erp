@@ -57,6 +57,18 @@ class OrderController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Add price_mismatch key
+        $orders->getCollection()->transform(function ($order) {
+            $order->price_mismatch = false; // default
+            foreach ($order->storeOrderItems as $item) {
+                if ($item->sale_price != $item->storeStockItem->sale_price) {
+                    $order->price_mismatch = true;
+                    break; // no need to check further
+                }
+            }
+            return $order;
+        });
+
         return Inertia::render('store/order/Order', [
             'orders' => $orders,
             'filters' => $request->only(['search', 'status', 'payment_method', 'customer_type', 'date_range']),
