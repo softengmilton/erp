@@ -176,6 +176,10 @@ class StockProductReportController extends Controller
                     'availble_asset_sale_price' => $availableAssetSalePrice,
                 ];
             });
+            // ->filter(function ($row) {
+            //     // 🧹 Remove rows whose available stock is zero
+            //     return $row['availble_stock'] != 0;
+            // });
 
             // Sort per-product rows
             $tableData = $tableData->sortByDesc(fn ($row) => $row['invoice_number'])->values();
@@ -245,9 +249,9 @@ class StockProductReportController extends Controller
         }
 
         // 🧹 Eliminate rows where available stock = 0
-        // $allTableData = $allTableData->filter(function ($row) {
-        //     return ! isset($row['availble_stock']) || $row['availble_stock'] != 0;
-        // })->values();
+        $allTableData = $allTableData->filter(function ($row) {
+            return ! isset($row['availble_stock']) || $row['availble_stock'] != 0;
+        })->values();
 
         return Inertia::render('store/reports/StockProductReport', [
             'productTypes' => $productTypes,
