@@ -484,163 +484,165 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
           </div>
         </div>
 
-        <!-- Adjustment Button with Dropdown -->
-        <div class="relative">
-          <button
-            @click="
-              showAdjustmentDropdown = !showAdjustmentDropdown;
-              showDiscountDropdown = false;
-              showPaymentDropdown = false;
-            "
-            class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 mr-2 text-blue-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        <div class="relative flex items-start gap-1.5">
+          <!-- Adjustment Button with Dropdown -->
+          <div class="relative">
+            <button
+              @click="
+                showAdjustmentDropdown = !showAdjustmentDropdown;
+                showDiscountDropdown = false;
+                showPaymentDropdown = false;
+              "
+              class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-white hover:bg-gray-50"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Adjustment
-          </button>
-          <div
-            v-if="showAdjustmentDropdown"
-            class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1 border"
-          >
-            <div class="px-4 py-2">
-              <label class="block text-sm text-gray-700 mb-1">Adjustment Amount</label>
-              <input
-                v-model.number="adjustmentAmount"
-                type="number"
-                class="w-full border rounded px-2 py-1 text-sm"
-                placeholder="Amount"
-                min="0"
-              />
-              <button
-                @click="applyAdjustment"
-                class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 mr-2 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Close
-              </button>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Adjustment
+            </button>
+            <div
+              v-if="showAdjustmentDropdown"
+              class="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg py-1 border"
+            >
+              <div class="px-4 py-2">
+                <label class="block text-sm text-gray-700 mb-1">Adjustment Amount</label>
+                <input
+                  v-model.number="adjustmentAmount"
+                  type="number"
+                  class="w-full border rounded px-2 py-1 text-sm"
+                  placeholder="Amount"
+                  min="0"
+                />
+                <button
+                  @click="applyAdjustment"
+                  class="mt-2 w-full bg-teal-600 text-white py-1 px-3 rounded text-sm hover:bg-teal-700"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Submit Order Button with Payment Options -->
-        <div class="relative">
-          <button
-            @click="
-              showPaymentDropdown = !showPaymentDropdown;
-              showDiscountDropdown = false;
-              showAdjustmentDropdown = false;
-            "
-            class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-teal-600 text-white hover:bg-teal-700"
-            :disabled="cartItems.length === 0"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <!-- Submit Order Button with Payment Options -->
+          <div class="relative">
+            <button
+              @click="
+                showPaymentDropdown = !showPaymentDropdown;
+                showDiscountDropdown = false;
+                showAdjustmentDropdown = false;
+              "
+              class="inline-flex items-center border rounded px-4 py-2 shadow text-sm bg-teal-600 text-white hover:bg-teal-700"
+              :disabled="cartItems.length === 0"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            Submit Order ({{
-              paymentMethods.find((p) => p.id === selectedPaymentMethod).name
-            }})
-          </button>
-          <!-- Payment Method Dropdown -->
-          <div
-            v-if="showPaymentDropdown"
-            class="absolute z-10 mt-1 right-0 w-72 bg-white rounded-md shadow-lg border"
-          >
-            <div class="px-4 py-3 border-b">
-              <h3 class="text-base font-semibold">Payment Details</h3>
-            </div>
-            <div class="px-4 py-3 space-y-4">
-              <div>
-                <h4 class="text-sm font-medium mb-2">Payment Method</h4>
-                <div class="grid grid-cols-3 gap-2">
-                  <button
-                    v-for="method in paymentMethods"
-                    :key="method.id"
-                    @click="selectedPaymentMethod = method.id"
-                    class="border rounded-md px-3 py-2 text-sm flex flex-col items-center"
-                    :class="{
-                      'border-teal-500 bg-teal-50': selectedPaymentMethod === method.id,
-                    }"
-                  >
-                    <span class="text-lg mb-1">{{ method.icon }}</span>
-                    <span>{{ method.name }}</span>
-                  </button>
-                </div>
-              </div>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Total Amount</label>
-                  <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
-                    {{ formatCurrency(cartTotal) }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Paid Amount</label>
-                  <input
-                    v-model.number="paidAmount"
-                    type="number"
-                    min="0"
-                    :max="cartTotal"
-                    class="w-full border rounded-md px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Due Amount</label>
-                  <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
-                    {{ formatCurrency(dueAmount) }}
-                  </div>
-                </div>
-              </div>
-              <button
-                @click="submitOrder"
-                :disabled="cartItems.length === 0 || isSubmitting"
-                class="w-full bg-teal-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <span v-if="!isSubmitting">Confirm Order</span>
-                <span v-else class="flex items-center justify-center">
-                  <svg
-                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Processing...
-                </span>
-              </button>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Submit Order ({{
+                paymentMethods.find((p) => p.id === selectedPaymentMethod).name
+              }})
+            </button>
+            <!-- Payment Method Dropdown -->
+            <div
+              v-if="showPaymentDropdown"
+              class="absolute z-10 mt-1 right-0 w-72 bg-white rounded-md shadow-lg border"
+            >
+              <div class="px-4 py-3 border-b">
+                <h3 class="text-base font-semibold">Payment Details</h3>
+              </div>
+              <div class="px-4 py-3 space-y-4">
+                <div>
+                  <h4 class="text-sm font-medium mb-2">Payment Method</h4>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="method in paymentMethods"
+                      :key="method.id"
+                      @click="selectedPaymentMethod = method.id"
+                      class="border rounded-md px-3 py-2 text-sm flex flex-col items-center"
+                      :class="{
+                        'border-teal-500 bg-teal-50': selectedPaymentMethod === method.id,
+                      }"
+                    >
+                      <span class="text-lg mb-1">{{ method.icon }}</span>
+                      <span>{{ method.name }}</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium mb-1">Total Amount</label>
+                    <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
+                      {{ formatCurrency(cartTotal) }}
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">Paid Amount</label>
+                    <input
+                      v-model.number="paidAmount"
+                      type="number"
+                      min="0"
+                      :max="cartTotal"
+                      class="w-full border rounded-md px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">Due Amount</label>
+                    <div class="w-full border rounded-md px-3 py-2 bg-gray-50 text-sm">
+                      {{ formatCurrency(dueAmount) }}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  @click="submitOrder"
+                  :disabled="cartItems.length === 0 || isSubmitting"
+                  class="w-full bg-teal-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="!isSubmitting">Confirm Order</span>
+                  <span v-else class="flex items-center justify-center">
+                    <svg
+                      class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Processing...
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
