@@ -225,11 +225,11 @@ const breadcrumbs = [
               >
                 Customer
               </th>
-              <th
+              <!-- <th
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 Items
-              </th>
+              </th> -->
               <th
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
@@ -276,9 +276,9 @@ const breadcrumbs = [
                   <span v-else-if="order.customer">{{ order.customer.name }}</span>
                   <span v-else>N/A</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ order.storeOrderItems?.length || 0 }}
-                </td>
+                </td> -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                    ${{ formatMoney(order.total_amount) }}
                 </td>
