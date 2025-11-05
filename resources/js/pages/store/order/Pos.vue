@@ -653,7 +653,7 @@ const breadcrumbs = [{ title: "POS", href: "/pos" }];
     <div class="w-full px-4 py-4">
       <div class="grid grid-cols-12 gap-4 h-[calc(100vh-96px)]">
         <!-- Products Grid: 6 per row (col-6) -->
-        <div class="col-span-8 lg:col-span-8 overflow-y-auto">
+        <div class="col-span-12 lg:col-span-8 overflow-y-auto min-h-[calc(100vh-160px)]">
           <!---- Bottom Header ---->
           <!-- Filters Section -->
           <div class="border-t border-gray-200 pt-4 mb-6">
