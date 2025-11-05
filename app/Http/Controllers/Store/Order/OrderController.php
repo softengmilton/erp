@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Store\Order;
 
 use App\Http\Controllers\Controller;
 use App\Models\StoreOrder;
+use DB;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use DB;
 use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
@@ -87,7 +87,7 @@ class OrderController extends Controller
         $order->load([
             'customer',
             'storeOrderItems.storeProduct',
-            'storeOrderItems.storeStock'
+            'storeOrderItems.storeStock',
         ]);
 
         return Inertia::render('store/order/Show', [
@@ -106,75 +106,76 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      */
-public function update(Request $request, $id)
-{
-    try {
-        $order = StoreOrder::findOrFail($id);
+    public function update(Request $request, $id)
+    {
+        try {
+            $order = StoreOrder::findOrFail($id);
 
-        $request->validate([
-            'due_amount' => 'required|numeric',
-        ]);
+            $request->validate([
+                'due_amount' => 'required|numeric',
+            ]);
 
-        if ($order->due_amount >= $request->due_amount) {
-            if ($order->due_amount == $request->due_amount) {
-                $order->update([
-                    'paid_amount' => $order->paid_amount + $request->due_amount,
-                    'due_amount' => 0,
-                    'payment_status' => 'paid',
-                ]);
+            if ($order->due_amount >= $request->due_amount) {
+                if ($order->due_amount == $request->due_amount) {
+                    $order->update([
+                        'paid_amount' => $order->paid_amount + $request->due_amount,
+                        'due_amount' => 0,
+                        'payment_status' => 'paid',
+                    ]);
 
-                return redirect()->back()->with([
-                    'toast' => [
-                        'type' => 'success',
-                        'message' => 'Payment updated successfully!'
-                    ]
-                ]);
+                    return redirect()->back()->with([
+                        'toast' => [
+                            'type' => 'success',
+                            'message' => 'Payment updated successfully!',
+                        ],
+                    ]);
+                } else {
+                    $new_due_amount = $order->due_amount - $request->due_amount;
+
+                    $order->update([
+                        'paid_amount' => $order->paid_amount + $request->due_amount,
+                        'due_amount' => $new_due_amount,
+                        'payment_status' => 'partial',
+                    ]);
+
+                    return redirect()->back()->with([
+                        'toast' => [
+                            'type' => 'success',
+                            'message' => 'Partial payment updated successfully!',
+                        ],
+                    ]);
+                }
             } else {
-                $new_due_amount = $order->due_amount - $request->due_amount;
-
-                $order->update([
-                    'paid_amount' => $order->paid_amount + $request->due_amount,
-                    'due_amount' => $new_due_amount,
-                    'payment_status' => 'partial',
-                ]);
-
                 return redirect()->back()->with([
                     'toast' => [
-                        'type' => 'success',
-                        'message' => 'Partial payment updated successfully!'
-                    ]
+                        'type' => 'error',
+                        'message' => 'Payment amount cannot be greater than due amount.',
+                    ],
                 ]);
             }
-        } else {
+        } catch (\Exception $e) {
             return redirect()->back()->with([
                 'toast' => [
                     'type' => 'error',
-                    'message' => 'Payment amount cannot be greater than due amount.'
-                ]
+                    'message' => $e->getMessage(),
+                ],
             ]);
         }
-    } catch (\Exception $e) {
-        return redirect()->back()->with([
-            'toast' => [
-                'type' => 'error',
-                'message' => $e->getMessage(),
-            ]
-        ]);
     }
-}
 
-
+    /**
+     * Remove the specified resource from storage.
+     */
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
-        // Delete related stock movements first
+        // Ensure the comparison uses the same collation and data type
         DB::table('store_stock_movements')
-            ->where('source_data->order_id', $id)
+            ->whereRaw("CAST(JSON_UNQUOTE(JSON_EXTRACT(source_data, '$.order_id')) AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci = ?", [$id])
             ->delete();
 
-     
         // Delete the order itself
         DB::table('store_orders')
             ->where('id', $id)
