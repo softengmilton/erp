@@ -192,24 +192,6 @@ function onPageClick(url) {
               </option>
             </select>
           </div>
-
-          <!-- Product Selector -->
-          <!-- <div class="min-w-[200px]">
-            <select
-              id="product"
-              v-model="selectedProduct"
-              class="w-full border border-gray-300 rounded p-2"
-            >
-              <option value="">Select Product</option>
-              <option
-                v-for="product in props.products"
-                :key="product.id"
-                :value="product.id"
-              >
-                {{ product.name }}
-              </option>
-            </select>
-          </div> -->
         </div>
       </div>
 
@@ -224,23 +206,15 @@ function onPageClick(url) {
         </div>
 
         <table ref="tableRef" class="min-w-full border-collapse border border-black font-mono text-sm">
-          <!-- <p>{{ props.formattedDate }}</p> -->
           <thead class="bg-gray-100">
             <tr>
               <td class="border px-10 py-2">Invoice Number</td>
               <td class="border px-4 py-2">Product Name</td>
-              <td class="border px-4 py-2">Unit Cost</td>
-              <td class="border px-4 py-2">Shipping Cost</td>
-              <td class="border px-4 py-2">Other Cost</td>
+
               <td class="border px-4 py-2">Costing Per Product</td>
               <td class="border px-4 py-2">Sale Price</td>
-              <td class="border px-4 py-2">Profit Per Product</td>
-              <td class="border px-4 py-2">Buy Price Asset</td>
-              <td class="border px-4 py-2">Sale Price Asset</td>
+
               <td class="border px-4 py-2">Sold Product</td>
-              <td class="border px-4 py-2">Sold - Buy Product Price</td>
-              <td class="border px-4 py-2">Sold Product Price</td>
-              <td class="border px-4 py-2">Total Profit/Product</td>
               
               <td class="border px-4 py-2">Initial Stock</td>
               <td class="border px-4 py-2">Availble Stock</td>
@@ -253,68 +227,20 @@ function onPageClick(url) {
             <tr v-for="(item, index) in props.tableData" :key="index">
               <td class="border px-4 py-2">{{ item.invoice_number }}</td>
               <td class="border px-4 py-2">{{ item.product_name }}</td>
-              <td class="border px-4 py-2">{{ item.unit_cost }}</td>
-              <td class="border px-4 py-2">{{ item.shipping }}</td>
-              <td class="border px-4 py-2">{{ item.fees }}</td>
+
               <td class="border px-4 py-2">{{ item.costing_per_product }}</td>
               <td class="border px-4 py-2">{{ item.sale_price }}</td>
-              <td class="border px-4 py-2">{{ item.profit_per_product  }}</td>
-              <td class="border px-4 py-2">{{ item.buy_price_asset  }}</td>
-              <td class="border px-4 py-2">{{ item.sale_price_asset  }}</td>
+
+
               <td class="border px-4 py-2">{{ item.sold_product  }}</td>
-              <td class="border px-4 py-2">{{ item.sold_buy_product_price  }}</td>
-              <td class="border px-4 py-2">{{ item.sold_product_price  }}</td>
-              <td class="border px-4 py-2">{{ item.total_profit_product  }}</td>
               
               <td class="border px-4 py-2">{{ item.quantity }}</td>
               <td class="border px-4 py-2">{{ item.availble_stock  }}</td>
               <td class="border px-4 py-2">{{ item.availble_asset_buy_price  }}</td>
               <td class="border px-4 py-2">{{ item.availble_asset_sale_price  }}</td>
             </tr>
-            <!-- <tr>
-              <td class="border px-4 py-2">Grand Total</td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2"> - </td>
-              <td class="border px-4 py-2">{{ grands.grand_buy_price_asset }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_sale_price_asset }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_sold_product }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_sold_buy_product_price }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_sold_product_price }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_profit_product }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_initial_stock }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_avaiable_stock }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_availble_asset_buy_price }}</td>
-              <td class="border px-4 py-2">{{ grands.grand_availble_asset_sale_price }}</td>
-            </tr> -->
           </tbody>
         </table>
-      </div>
-
-      <!-- 🧭 Pagination -->
-      <div class="flex justify-center mt-6 space-x-1">
-        <template v-for="(link, i) in props.products.links" :key="i">
-          <button
-            v-if="link.url"
-            @click="onPageClick(link.url)"
-            v-html="link.label"
-            :class="[
-              'px-3 py-1 border rounded',
-              link.active
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            ]"
-          />
-          <span
-            v-else
-            v-html="link.label"
-            class="px-3 py-1 text-gray-400 cursor-not-allowed"
-          />
-        </template>
       </div>
     </div>
   </AppLayout>
