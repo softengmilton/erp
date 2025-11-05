@@ -13,6 +13,7 @@ import Input from "@/components/ui/input/Input.vue";
 import InputError from "@/components/InputError.vue";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
 
+
 // Initialize store settings
 initStoreSetting();
 
@@ -175,90 +176,60 @@ function removeImage() {
   const fileInput = document.querySelector('input[type="file"]');
   if (fileInput) fileInput.value = "";
 }
-function printInvoice() {
-  const printWindow = window.open("", "", "width=900,height=650");
-  const today = new Date().toLocaleDateString();
-
-const settings = StoreSetting.all.value;
-  const formatCurrency = (val) => Number(val || 0).toFixed(2);
-  const formatNumber = (val) => Number(val || 0);
-
-  const productsRows = (form.products || [])
-    .map(
-      (p) => `
-        <tr>
-          <td style="border:1px solid #ccc;padding:6px;">${p.name ?? ""}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:center;">${formatNumber(p.quantity)}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.unit_cost)}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.unit_landed_cost)}</td>
-          <td style="border:1px solid #ccc;padding:6px;text-align:right;">$${formatCurrency(p.total_cost)}</td>
-        </tr>
-      `
-    )
-    .join("");
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Purchase Invoice - ${form.invoice_number ?? ""}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1, h2, h3 { margin: 0 0 10px; }
-          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }
-          th { background: #f4f4f4; border:1px solid #ccc; padding:6px; }
-          .header{text-align:center}
-        </style>
-      </head>
-      <body>
-            <div class="header">
-            <h1>${settings.business_title || "Store Name"}</h1>
-            <p>${settings.address || ""}</p>
-            <p>${settings.business_email || ""} | ${settings.phone || ""}</p>
-              <h1>Purchase Invoice</h1>
-        <p><strong>Date:</strong> ${today}</p>
-        <p><strong>Invoice #:</strong> ${form.invoice_number ?? "-"}</p>
-        <p><strong>Supplier:</strong> ${form.supplier_name ?? "-"}</p>
-          </div>
-
-
-        <table>
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Qty</th>
-              <th>Unit Cost</th>
-              <th>Landed Cost</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${productsRows}
-          </tbody>
-        </table>
-
-        <h3 style="margin-top:20px;">Summary</h3>
-        <p><strong>Subtotal:</strong> $${formatCurrency(subtotal.value)}</p>
-        <p><strong>Shipping:</strong> $${formatCurrency(form.shipping_cost)}</p>
-        <p><strong>Other Fees:</strong> $${formatCurrency(form.other_fees)}</p>
-        <p><strong>Grand Total:</strong> $${formatCurrency(grandTotal.value)}</p>
-
-        <p style="margin-top:20px;"><strong>Notes:</strong><br/>${form.note ?? "-"}</p>
-               <div class="footer">
-            <p>Thank you for your business!</p>
-            <p style="margin-top:8px; font-size:11px; color:#999;">
-                Powered by <a href="https://infinityflamesoft.com/" target="_blank" style="color:#0d9488; text-decoration:none;">Infinity Flame Soft</a>
-            </p>
-        </div>
-      </body>
-    </html>
-  `);
-
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-}
 
 function submitForm() {
+// --- BASIC VALIDATION ---
+  if (!form.invoice_number) {
+    alert("Invoice number is missing.");
+    return;
+  }
+
+  if (!form.supplier_name.trim()) {
+    alert("Supplier name cannot be empty.");
+    return;
+  }
+
+  if (form.products.length === 0) {
+    alert("Please add at least one product before submitting.");
+    return;
+  }
+
+  // --- COST VALIDATION ---
+  if (form.shipping_cost < 0) {
+    alert("Shipping cost cannot be negative.");
+    return;
+  }
+
+  if (form.other_fees < 0) {
+    alert("Other fees cannot be negative.");
+    return;
+  }
+
+  // --- PRODUCT VALIDATION ---
+  for (const product of form.products) {
+    if (product.quantity <= 0) {
+      alert(`Quantity for "${product.name}" must be greater than zero.`);
+      return;
+    }
+    if (product.unit_cost <= 0) {
+      alert(`Unit cost for "${product.name}" must be greater than zero.`);
+      return;
+    }
+    if (product.sale_price <= 0) {
+      alert(`Sale price for "${product.name}" must be greater than zero.`);
+      return;
+    }
+    if (product.sale_price < product.unit_landed_cost) {
+      alert(
+        `Sale price for "${product.name}" cannot be less than its landed cost ($${product.unit_landed_cost.toFixed(
+          2
+        )}).`
+      );
+      return;
+    }
+  }
+
+
   router.post("/store/stocks", form, {
     onSuccess: () => {
       searchQuery.value = "";

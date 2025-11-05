@@ -1,8 +1,14 @@
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
 import { Head,router } from "@inertiajs/vue3";
-import { ref } from "vue";
-import { formatCurrency, formatDate,formatCompactPriceHistory,formatAdjustmentHistory } from "@/utils/helper.js";
+import { computed, ref } from "vue";
+import { formatCurrency, formatDate, formatCompactPriceHistory, formatAdjustmentHistory } from "@/utils/helper.js";
+import StockReceipt from "./Components/StockPrint.vue";
+import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+
+
+// Initialize store settings
+initStoreSetting();
 
 const props = defineProps({
   stock: {
@@ -83,10 +89,54 @@ const submitAdjustment = () => {
     }
   );
 };
+const settings = StoreSetting.all.value;
+// Invoice print
+const receiptRef = ref(null);
+
+// Computed invoice data
+const invoiceData = computed(() => {
+  if (!props.stock) return {};
+  const items = props.stock.store_stock_items.map(item => ({
+    name: item.store_product?.name || "Unnamed Product",
+    quantity: item.quantity,
+    unit_cost: item.unit_cost,
+    unit_landed_cost: item.unit_cost + (item.shipping_cost_unit || 0) + (item.other_fees_unit || 0),
+    total_cost: item.total_cost,
+  }));
+
+  return {
+    items,
+    supplierName: props.stock.supplier_name || "N/A",
+    invoiceNumber: props.stock.invoice_number,
+    subtotal: items.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0),
+    shipping: props.stock.shipping_cost || 0,
+    otherFees: props.stock.other_fees || 0,
+    total: props.stock.total_cost || 0,
+    note: props.stock.note || "",
+    storeInfo: {
+      business_title: settings.business_title || "My Store",
+      address: settings.address || "123 Example Street",
+      phone: settings.phone || "+123456789",
+    },
+  };
+});
 </script>
 
 <template>
   <Head title="Stock Details" />
+      <!-- Stock Receipt Component -->
+    <StockReceipt
+      ref="receiptRef"
+      :items="invoiceData.items"
+      :supplier-name="invoiceData.supplierName"
+      :invoice-number="invoiceData.invoiceNumber"
+      :subtotal="invoiceData.subtotal"
+      :shipping="invoiceData.shipping"
+      :other-fees="invoiceData.otherFees"
+      :total="invoiceData.total"
+      :note="invoiceData.note"
+      :store-info="invoiceData.storeInfo"
+    />
   <AppLayout>
     <div class="p-6">
       <!-- Summary Section -->
@@ -150,6 +200,7 @@ const submitAdjustment = () => {
             </div>
           </div>
         </div>
+
 
         <!-- Right Cost Cards -->
         <div class="p-4 rounded-lg border w-full lg:w-auto">
@@ -292,16 +343,15 @@ const submitAdjustment = () => {
       <div class="flex justify-between items-center mb-4">
         <input
           type="text"
-          placeholder="Search name or prescription ID..."
+          placeholder="Search name "
           class="border px-3 py-2 rounded-md w-1/3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
-        <div class="flex gap-2">
-          <button
-            class="border border-gray-300 px-4 py-2 rounded-md text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Filters
-          </button>
-        </div>
+        <button
+          @click="receiptRef.show()"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Print Receipt
+        </button>
       </div>
 
       <!-- Product Table -->
