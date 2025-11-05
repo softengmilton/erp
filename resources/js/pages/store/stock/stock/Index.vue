@@ -11,6 +11,7 @@ const props = defineProps({
   },
 });
 
+
 const searchQuery = ref("");
 const isDeleting = ref(false);
 const selectedStock = ref(null);
@@ -147,7 +148,9 @@ const breadcrumbs = [{ title: "Stocks", href: "/store/stocks" }];
               <td
                 class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3"
               >
+
                 <button
+                 v-if="stock.store_stock_movements.every(m => m.source_type === 'purchase')"
                   @click="openDeleteConfirm(stock)"
                   class="text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
                 >
