@@ -21,7 +21,7 @@ class StockReportController extends Controller
     {
         $service = new StockAdjustmentService;
         $service->adjustAllStockItems();
-        $selectedMonth = $request->input('month'); // format: YYYY-MM
+        $selectedMonth = $request->input('month') ?? now()->format('Y-m'); // format: YYYY-MM
         $selectedCategoryId = $request->input('category_id');
 
         // Determine month start and end

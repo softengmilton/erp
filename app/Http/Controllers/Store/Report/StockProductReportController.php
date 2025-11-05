@@ -29,7 +29,7 @@ class StockProductReportController extends Controller
         $productTypes = StoreProductType::select('id', 'name')->get();
         $categoryId = $selectedCatId ?? StoreProductType::orderBy('id', 'desc')->value('id');
 
-        // 🟢 Paginate products (Option 2)
+        //  Paginate products (Option 2)
         $perPage = 3; // change to whatever number of products per page you want
         $products = StoreProduct::where('store_product_type_id', $categoryId)
             ->orderBy('id', 'desc')
