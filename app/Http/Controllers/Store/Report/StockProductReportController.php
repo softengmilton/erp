@@ -175,11 +175,10 @@ class StockProductReportController extends Controller
                     'availble_asset_buy_price' => $availableAssetBuyPrice,
                     'availble_asset_sale_price' => $availableAssetSalePrice,
                 ];
+            })->filter(function ($row) {
+                // 🧹 Remove rows whose available stock is zero
+                return $row['availble_stock'] != 0;
             });
-            // ->filter(function ($row) {
-            //     // 🧹 Remove rows whose available stock is zero
-            //     return $row['availble_stock'] != 0;
-            // });
 
             // Sort per-product rows
             $tableData = $tableData->sortByDesc(fn ($row) => $row['invoice_number'])->values();
