@@ -86,13 +86,37 @@ class DashboardController extends Controller
             $q->whereBetween('created_at', [$todayStart, $todayEnd]);
         })
             ->get()
-            ->sum(fn($item) => $item->quantity * optional($item->stockItem)->unit_cost);
+            ->sum(function ($item) {
+                $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+
+                if (!$stockItem) return 0;
+
+                $unitCost = ($stockItem->unit_cost ?? 0)
+                    + ($stockItem->shipping ?? 0)
+                    + ($stockItem->fees ?? 0);
+
+                return $item->quantity * $unitCost;
+            });
 
         $monthProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($monthStart, $monthEnd) {
             $q->whereBetween('created_at', [$monthStart, $monthEnd]);
         })
             ->get()
-            ->sum(fn($item) => $item->quantity * optional($item->stockItem)->unit_cost);
+            ->sum(function ($item) {
+                $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+
+                if (!$stockItem) return 0;
+
+                $unitCost = ($stockItem->unit_cost ?? 0)
+                    + ($stockItem->shipping_cost_unit ?? 0)
+                    + ($stockItem->other_fees_unit ?? 0);
+
+                return $item->quantity * $unitCost;
+            });
+
+        // var_dump($monthProductCosts);
+        // exit;
+
 
         return [
             'today' => $todayOperational + $todayProductCosts,
