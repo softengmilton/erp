@@ -252,28 +252,48 @@ class DashboardController extends Controller
      */
     public function availableAssetsSalePrice()
     {
-        $totalSalePrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
-            ->get()
-            ->flatMap(function ($product) {
-                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
-                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+        $totalSalePrice = collect();
 
-                    // Calculate sold quantity for this invoice
-                    $soldQty = $product->storeStockMovements
-                        ->where('source_type', 'sale')
-                        ->where('storeStock.invoice_number', $invoiceNumber)
-                        ->sum('change_quantity');
+        $products = \App\Models\StoreProduct::with(['storeStockMovements.storeStock'])->get();
 
-                    $quantity = $purchase->change_quantity;
-                    $availableStock = max(0, $quantity - $soldQty);
+        foreach ($products as $product) {
+            // Get all purchase movements
+            $purchaseMovements = $product->storeStockMovements
+                ->where('source_type', 'purchase');
 
-                    $salePrice = $purchase->storeStockItem->sale_price ?? 0;
+            // Get all sales grouped by invoice
+            $soldPerInvoice = $product->storeStockMovements
+                ->where('source_type', 'sale')
+                ->groupBy(fn($item) => $item->storeStock->invoice_number ?? 'N/A')
+                ->map(fn($group) => $group->sum('change_quantity'));
 
-                    return $availableStock * $salePrice;
-                });
-            })
-            ->sum();
+            foreach ($purchaseMovements as $purchase) {
+                $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+                $soldQty = $soldPerInvoice[$invoiceNumber] ?? 0;
 
-        return $totalSalePrice;
+                $quantity = $purchase->change_quantity;
+                $sourceData = is_array($purchase->source_data) ? $purchase->source_data : json_decode($purchase->source_data ?? '{}', true);
+                $unitCost = $sourceData['unit_cost'] ?? 0;
+                $shipping = $sourceData['shipping'] ?? 0;
+                $fees = $sourceData['fees'] ?? 0;
+
+                $costPerProduct = $unitCost + $shipping + $fees;
+
+                // Sale price from the latest stock item in this invoice
+                $stockItem = \App\Models\StoreStockItem::where('store_product_id', $product->id)
+                    ->where('store_stock_id', $purchase->store_stock_id)
+                    ->latest('id')
+                    ->first();
+
+                $salePrice = $stockItem->sale_price ?? 0;
+
+                // Remaining stock after sold quantity
+                $remainingStock = max(0, $quantity - $soldQty);
+
+                $totalSalePrice->push($remainingStock * $salePrice);
+            }
+        }
+
+        return $totalSalePrice->sum();
     }
 }
