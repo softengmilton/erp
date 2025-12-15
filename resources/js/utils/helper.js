@@ -70,4 +70,10 @@ function formatAdjustmentLine(adjustment) {
 
     return `${date} - ${type} ${quantity} items${note}`;
 }
-export { formatCurrency, formatDate,formatCompactPriceHistory,formatAdjustmentHistory };
+
+function formatNumber(value) {
+  if (value === null || value === undefined || isNaN(value)) return 'N/A';
+  return `${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export { formatCurrency, formatDate,formatCompactPriceHistory,formatAdjustmentHistory, formatNumber };

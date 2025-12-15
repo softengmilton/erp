@@ -1,7 +1,23 @@
 <template>
   <Head title="Dashboard" />
+
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-4 flex flex-col gap-6">
+
+      <!-- Period Filter -->
+      <div class="flex justify-end">
+        <select
+          v-model="selectedPeriod"
+          class="rounded-lg border
+                 px-6 py-2 text-sm bg-white
+                 focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="today">Today</option>
+          <option value="month">This Month</option>
+          <option value="year">This Year</option>
+        </select>
+      </div>
+
       <!-- First row: horizontally scrollable widgets -->
       <div class="flex gap-4 overflow-x-auto p-4">
         <Widget
@@ -23,9 +39,8 @@
         </Widget>
       </div>
 
-      <!-- Second row: stats -->
-      <!-- Second row: stats (compact) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 auto-rows-min">
+      <!-- Second row: Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <Widget
           v-for="(item, index) in secondRowWidgets"
           :key="index"
@@ -40,16 +55,20 @@
       <!-- Third row: Charts -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div
-          class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+          class="relative aspect-video overflow-hidden rounded-xl
+                 border border-sidebar-border/70 dark:border-sidebar-border"
         >
           <SpilineAreaChart :chartData="monthlyData" />
         </div>
+
         <div
-          class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+          class="relative aspect-video overflow-hidden rounded-xl
+                 border border-sidebar-border/70 dark:border-sidebar-border"
         >
           <StackedColumnsChart :chartData="salesByType" />
         </div>
       </div>
+
     </div>
   </AppLayout>
 </template>
@@ -57,19 +76,21 @@
 <script setup lang="ts">
 /**
  * DASHBOARD PAGE
- * - Fixes chart props passing
- * - Fixes type errors in chartData
- * - Fully compatible with Inertia backend (DashboardController)
+ * - Today / Month / Year filter
+ * - Inertia reload
+ * - Reactive widgets
  */
+
+import { ref, computed, watch } from "vue";
+import { Head, router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
 import Widget from "@/components/Widget.vue";
 import SpilineAreaChart from "@/components/charts/SpilineAreaChart.vue";
 import StackedColumnsChart from "@/components/charts/StackedColumnsChart.vue";
-import { ref } from "vue";
 import * as LucideIcons from "lucide-vue-next";
+import { formatNumber } from "@/utils/helper";
 
-// ✅ Receive data from backend (Inertia)
+/* ---------------- PROPS ---------------- */
 const props = defineProps({
   widgets: { type: Object, default: () => ({}) },
   monthlyData: {
@@ -77,130 +98,83 @@ const props = defineProps({
     default: () => ({ months: [], revenue: [], expenses: [] }),
   },
   salesByType: { type: Object, default: () => ({ months: [], data: [] }) },
-  productTypes: { type: Array, default: () => [] },
 });
 
-console.log("Dashboard props:", props.salesByType);
-
-// Breadcrumbs
+/* ---------------- STATE ---------------- */
 const breadcrumbs = [{ title: "Dashboard", href: "/dashboard" }];
-
-// Selected index (for top row highlight)
 const selectedIndex = ref(0);
+const selectedPeriod = ref<"today" | "month" | "year">("month");
 
-// First row widgets (category icons)
+/* ---------------- INERTIA RELOAD ---------------- */
+watch(selectedPeriod, (period) => {
+  router.get(
+    "/dashboard",
+    { period },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    }
+  );
+});
+
+/* ---------------- FIRST ROW ---------------- */
 const firstRowWidgets = [
-  {
-    title: "Store",
-    gradientFrom: "from-pink-500",
-    gradientTo: "to-red-400",
-    icon: LucideIcons.Store,
-  },
-  {
-    title: "Restaurant",
-    gradientFrom: "from-green-400",
-    gradientTo: "to-teal-400",
-    icon: LucideIcons.Coffee,
-  },
-  {
-    title: "War House",
-    gradientFrom: "from-pink-400",
-    gradientTo: "to-red-400",
-    icon: LucideIcons.Home,
-  },
-  {
-    title: "Convention Hall",
-    gradientFrom: "from-yellow-400",
-    gradientTo: "to-orange-400",
-    icon: LucideIcons.Home,
-  },
-  {
-    title: "Park",
-    gradientFrom: "from-blue-500",
-    gradientTo: "to-indigo-400",
-    icon: LucideIcons.ShoppingCart,
-  },
-  {
-    title: "Resort",
-    gradientFrom: "from-purple-500",
-    gradientTo: "to-pink-400",
-    icon: LucideIcons.Home,
-  },
-  {
-    title: "Swimming Pool",
-    gradientFrom: "from-cyan-400",
-    gradientTo: "to-blue-400",
-    icon: LucideIcons.Coffee,
-  },
-  {
-    title: "Ride",
-    gradientFrom: "from-pink-500",
-    gradientTo: "to-red-400",
-    icon: LucideIcons.ShoppingCart,
-  },
-  {
-    title: "Children Zone",
-    gradientFrom: "from-blue-500",
-    gradientTo: "to-indigo-400",
-    icon: LucideIcons.Home,
-  },
-  {
-    title: "Boat Ride",
-    gradientFrom: "from-yellow-400",
-    gradientTo: "to-orange-400",
-    icon: LucideIcons.ShoppingCart,
-  },
-  {
-    title: "LPG Station",
-    gradientFrom: "from-pink-500",
-    gradientTo: "to-red-400",
-    icon: LucideIcons.Home,
-  },
+  { title: "Store", gradientFrom: "from-pink-500", gradientTo: "to-red-400", icon: LucideIcons.Store },
+  { title: "Restaurant", gradientFrom: "from-green-400", gradientTo: "to-teal-400", icon: LucideIcons.Coffee },
+  { title: "War House", gradientFrom: "from-pink-400", gradientTo: "to-red-400", icon: LucideIcons.Home },
+  { title: "Convention Hall", gradientFrom: "from-yellow-400", gradientTo: "to-orange-400", icon: LucideIcons.Home },
+  { title: "Park", gradientFrom: "from-blue-500", gradientTo: "to-indigo-400", icon: LucideIcons.ShoppingCart },
+  { title: "Resort", gradientFrom: "from-purple-500", gradientTo: "to-pink-400", icon: LucideIcons.Home },
+  { title: "Swimming Pool", gradientFrom: "from-cyan-400", gradientTo: "to-blue-400", icon: LucideIcons.Coffee },
+  { title: "Ride", gradientFrom: "from-pink-500", gradientTo: "to-red-400", icon: LucideIcons.ShoppingCart },
+  { title: "Children Zone", gradientFrom: "from-blue-500", gradientTo: "to-indigo-400", icon: LucideIcons.Home },
+  { title: "Boat Ride", gradientFrom: "from-yellow-400", gradientTo: "to-orange-400", icon: LucideIcons.ShoppingCart },
+  { title: "LPG Station", gradientFrom: "from-pink-500", gradientTo: "to-red-400", icon: LucideIcons.Home },
 ];
 
-// Second row stats (dynamic from backend)
-const secondRowWidgets = [
+/* ---------------- SECOND ROW (REACTIVE) ---------------- */
+const secondRowWidgets = computed(() => [
   {
     title: "Sales",
-    value: `${Number(props.widgets.sales?.month || 0).toLocaleString()}`,
+    value: formatNumber(props.widgets.sales?.[selectedPeriod.value] || 0),
     gradientFrom: "from-blue-500",
     gradientTo: "to-indigo-400",
   },
   {
     title: "Revenue",
-    value: `${Number(props.widgets.revenue?.month || 0).toLocaleString()}`,
+    value: formatNumber(props.widgets.revenue?.[selectedPeriod.value] || 0),
     gradientFrom: "from-pink-500",
     gradientTo: "to-red-400",
   },
   {
     title: "Products",
-    value: `${props.widgets.products || 0}`,
+    value: props.widgets.products || 0,
     gradientFrom: "from-yellow-400",
     gradientTo: "to-orange-400",
   },
   {
     title: "Due",
-    value: `${Number(props.widgets.due || 0).toLocaleString()}`,
+    value: formatNumber(props.widgets.due || 0),
     gradientFrom: "from-green-400",
     gradientTo: "to-teal-400",
   },
   {
     title: "Sale Assets (Buy Price)",
-    value: `${Number(props.widgets.sale_assets.buy_price || 0).toLocaleString()}`,
+    value: formatNumber(props.widgets.sale_assets?.buy_price || 0),
     gradientFrom: "from-purple-500",
     gradientTo: "to-pink-400",
   },
   {
     title: "Sale Assets (Sale Price)",
-    value: `${Number(props.widgets.sale_assets.sale_price || 0).toLocaleString()}`,
+    value: formatNumber(props.widgets.sale_assets?.sale_price || 0),
     gradientFrom: "from-cyan-400",
     gradientTo: "to-blue-400",
   },
-];
+]);
 </script>
 
 <style scoped>
-/* Custom scrollbar styling */
 .overflow-x-auto::-webkit-scrollbar {
   height: 8px;
 }
@@ -212,16 +186,10 @@ const secondRowWidgets = [
   background: #c5c5c5;
   border-radius: 4px;
 }
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 .dark .overflow-x-auto::-webkit-scrollbar-track {
   background: #374151;
 }
 .dark .overflow-x-auto::-webkit-scrollbar-thumb {
   background: #6b7280;
-}
-.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
 }
 </style>

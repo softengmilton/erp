@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { formatNumber } from '@/utils/helper';
 
 const props = defineProps({
   report: Object,
@@ -169,7 +170,7 @@ const breadcrumbs = [
                   <td class="border px-4 py-2">{{ row.sold_qty }}</td>
                   <td class="border px-4 py-2">{{ row.adjustment }}</td>
                   <td class="border px-4 py-2">{{ row.available_stock }}</td>
-                  <td class="border px-4 py-2">৳{{ row.total_sale }}</td>
+                  <td class="border px-4 py-2">৳{{ formatNumber(row.total_sale) }}</td>
                 </tr>
               </template>
             </template>

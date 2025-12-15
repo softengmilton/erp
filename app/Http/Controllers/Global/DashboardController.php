@@ -18,8 +18,13 @@ class DashboardController extends Controller
         // Date ranges
         $todayStart = Carbon::today()->startOfDay();
         $todayEnd = Carbon::today()->endOfDay();
+
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
+
+        // ✅ YEAR RANGE
+        $yearStart = Carbon::now()->startOfYear();
+        $yearEnd = Carbon::now()->endOfYear();
 
         // SALES
         $todaySales = StoreOrder::whereBetween('created_at', [$todayStart, $todayEnd])
@@ -28,10 +33,20 @@ class DashboardController extends Controller
         $monthSales = StoreOrder::whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total_amount');
 
+        $yearSales = StoreOrder::whereBetween('created_at', [$yearStart, $yearEnd])
+            ->sum('total_amount');
+
         $totalDue = StoreOrder::where('due_amount', '>', 0)->sum('due_amount');
 
         // EXPENSES
-        $expensesData = $this->getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd);
+        $expensesData = $this->getExpensesData(
+            $todayStart,
+            $todayEnd,
+            $monthStart,
+            $monthEnd,
+            $yearStart,
+            $yearEnd
+        );
 
         // PRODUCT COUNT
         $productCount = StoreStockItem::where('quantity', '>', 0)
@@ -41,20 +56,23 @@ class DashboardController extends Controller
         // REVENUE
         $todayRevenue = $todaySales - ($expensesData['today'] ?? 0);
         $monthRevenue = $monthSales - ($expensesData['month'] ?? 0);
+        $yearRevenue  = $yearSales - ($expensesData['year'] ?? 0);
 
         // CHART DATA
         $monthlyChartData = $this->getMonthlyChartData();
-        $salesByTypeData = $this->getSalesByTypeData($monthStart, $monthEnd);
+        $salesByTypeData = $this->getSalesByTypeData();
 
         // FRONTEND DATA
         $widgets = [
             'sales' => [
                 'today' => $todaySales,
-                'month' => $monthSales
+                'month' => $monthSales,
+                'year'  => $yearSales,
             ],
             'revenue' => [
                 'today' => $todayRevenue,
-                'month' => $monthRevenue
+                'month' => $monthRevenue,
+                'year'  => $yearRevenue,
             ],
             'products' => $productCount,
             'due' => $totalDue,
@@ -75,52 +93,64 @@ class DashboardController extends Controller
     /**
      * Get expenses data including operational and product costs
      */
-    private function getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd)
-    {
+    private function getExpensesData(
+        $todayStart,
+        $todayEnd,
+        $monthStart,
+        $monthEnd,
+        $yearStart,
+        $yearEnd
+    ) {
         // Operational expenses
         $todayOperational = StoreExpense::whereBetween('created_at', [$todayStart, $todayEnd])->sum('amount');
         $monthOperational = StoreExpense::whereBetween('created_at', [$monthStart, $monthEnd])->sum('amount');
+        $yearOperational  = StoreExpense::whereBetween('created_at', [$yearStart, $yearEnd])->sum('amount');
 
         // Product costs (COGS)
         $todayProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($todayStart, $todayEnd) {
             $q->whereBetween('created_at', [$todayStart, $todayEnd]);
-        })
-            ->get()
-            ->sum(function ($item) {
-                $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+        })->get()->sum(function ($item) {
+            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+            if (!$stockItem) return 0;
 
-                if (!$stockItem) return 0;
+            // Use the same fields as month/year
+            $unitCost = ($stockItem->unit_cost ?? 0)
+                + ($stockItem->shipping_cost_unit ?? 0)
+                + ($stockItem->other_fees_unit ?? 0);
 
-                $unitCost = ($stockItem->unit_cost ?? 0)
-                    + ($stockItem->shipping ?? 0)
-                    + ($stockItem->fees ?? 0);
-
-                return $item->quantity * $unitCost;
-            });
+            return $item->quantity * $unitCost;
+        });
 
         $monthProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($monthStart, $monthEnd) {
             $q->whereBetween('created_at', [$monthStart, $monthEnd]);
-        })
-            ->get()
-            ->sum(function ($item) {
-                $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+        })->get()->sum(function ($item) {
+            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+            if (!$stockItem) return 0;
 
-                if (!$stockItem) return 0;
+            $unitCost = ($stockItem->unit_cost ?? 0)
+                + ($stockItem->shipping_cost_unit ?? 0)
+                + ($stockItem->other_fees_unit ?? 0);
 
-                $unitCost = ($stockItem->unit_cost ?? 0)
-                    + ($stockItem->shipping_cost_unit ?? 0)
-                    + ($stockItem->other_fees_unit ?? 0);
+            return $item->quantity * $unitCost;
+        });
 
-                return $item->quantity * $unitCost;
-            });
+        $yearProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($yearStart, $yearEnd) {
+            $q->whereBetween('created_at', [$yearStart, $yearEnd]);
+        })->get()->sum(function ($item) {
+            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
+            if (!$stockItem) return 0;
 
-        // var_dump($monthProductCosts);
-        // exit;
+            $unitCost = ($stockItem->unit_cost ?? 0)
+                + ($stockItem->shipping_cost_unit ?? 0)
+                + ($stockItem->other_fees_unit ?? 0);
 
+            return $item->quantity * $unitCost;
+        });
 
         return [
             'today' => $todayOperational + $todayProductCosts,
             'month' => $monthOperational + $monthProductCosts,
+            'year'  => $yearOperational + $yearProductCosts,
         ];
     }
 
@@ -160,9 +190,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get sales by product type
-     */
-    /**
      * Get sales by product type for the last 12 months
      */
     private function getSalesByTypeData()
@@ -176,8 +203,7 @@ class DashboardController extends Controller
         }
 
         $salesByType = [];
-
-        $types = \App\Models\StoreProductType::all();
+        $types = StoreProductType::all();
 
         foreach ($types as $type) {
             $productIds = \App\Models\StoreProduct::where('store_product_type_id', $type->id)
@@ -194,7 +220,7 @@ class DashboardController extends Controller
                 ->get();
 
             foreach ($orderItems as $item) {
-                $orderDate = \Carbon\Carbon::parse($item->storeOrder->created_at);
+                $orderDate = Carbon::parse($item->storeOrder->created_at);
                 $monthIndex = $startWindow->diffInMonths($orderDate);
                 if ($monthIndex >= 0 && $monthIndex < 12) {
                     $monthlySales[$monthIndex] += $item->sale_price * $item->quantity;
@@ -221,26 +247,30 @@ class DashboardController extends Controller
         $totalBuyPrice = \App\Models\StoreProduct::with(['storeStockMovements.storeStockItem', 'storeStockMovements.storeStock'])
             ->get()
             ->flatMap(function ($product) {
-                return $product->storeStockMovements->where('source_type', 'purchase')->map(function ($purchase) use ($product) {
-                    $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
+                return $product->storeStockMovements
+                    ->where('source_type', 'purchase')
+                    ->map(function ($purchase) use ($product) {
+                        $invoiceNumber = $purchase->storeStock->invoice_number ?? 'N/A';
 
-                    // Calculate sold quantity for this invoice
-                    $soldQty = $product->storeStockMovements
-                        ->where('source_type', 'sale')
-                        ->where('storeStock.invoice_number', $invoiceNumber)
-                        ->sum('change_quantity');
+                        $soldQty = $product->storeStockMovements
+                            ->where('source_type', 'sale')
+                            ->where('storeStock.invoice_number', $invoiceNumber)
+                            ->sum('change_quantity');
 
-                    $quantity = $purchase->change_quantity;
-                    $sourceData = is_array($purchase->source_data) ? $purchase->source_data : json_decode($purchase->source_data ?? '{}', true);
-                    $unitCost = $sourceData['unit_cost'] ?? 0;
-                    $shipping = $sourceData['shipping'] ?? 0;
-                    $fees = $sourceData['fees'] ?? 0;
+                        $quantity = $purchase->change_quantity;
+                        $sourceData = is_array($purchase->source_data)
+                            ? $purchase->source_data
+                            : json_decode($purchase->source_data ?? '{}', true);
 
-                    $availableStock = max(0, $quantity - $soldQty);
-                    $costPerProduct = $unitCost + $shipping + $fees;
+                        $unitCost = $sourceData['unit_cost'] ?? 0;
+                        $shipping = $sourceData['shipping'] ?? 0;
+                        $fees = $sourceData['fees'] ?? 0;
 
-                    return $availableStock * $costPerProduct;
-                });
+                        $availableStock = max(0, $quantity - $soldQty);
+                        $costPerProduct = $unitCost + $shipping + $fees;
+
+                        return $availableStock * $costPerProduct;
+                    });
             })
             ->sum();
 
@@ -257,11 +287,9 @@ class DashboardController extends Controller
         $products = \App\Models\StoreProduct::with(['storeStockMovements.storeStock'])->get();
 
         foreach ($products as $product) {
-            // Get all purchase movements
             $purchaseMovements = $product->storeStockMovements
                 ->where('source_type', 'purchase');
 
-            // Get all sales grouped by invoice
             $soldPerInvoice = $product->storeStockMovements
                 ->where('source_type', 'sale')
                 ->groupBy(fn($item) => $item->storeStock->invoice_number ?? 'N/A')
@@ -272,22 +300,22 @@ class DashboardController extends Controller
                 $soldQty = $soldPerInvoice[$invoiceNumber] ?? 0;
 
                 $quantity = $purchase->change_quantity;
-                $sourceData = is_array($purchase->source_data) ? $purchase->source_data : json_decode($purchase->source_data ?? '{}', true);
+                $sourceData = is_array($purchase->source_data)
+                    ? $purchase->source_data
+                    : json_decode($purchase->source_data ?? '{}', true);
+
                 $unitCost = $sourceData['unit_cost'] ?? 0;
                 $shipping = $sourceData['shipping'] ?? 0;
                 $fees = $sourceData['fees'] ?? 0;
 
                 $costPerProduct = $unitCost + $shipping + $fees;
 
-                // Sale price from the latest stock item in this invoice
                 $stockItem = \App\Models\StoreStockItem::where('store_product_id', $product->id)
                     ->where('store_stock_id', $purchase->store_stock_id)
                     ->latest('id')
                     ->first();
 
                 $salePrice = $stockItem->sale_price ?? 0;
-
-                // Remaining stock after sold quantity
                 $remainingStock = max(0, $quantity - $soldQty);
 
                 $totalSalePrice->push($remainingStock * $salePrice);

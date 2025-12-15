@@ -3,6 +3,7 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import { Head, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
 import Widget from "@/components/Widget.vue";
+import { formatNumber } from "@/utils/helper";
 
 const props = defineProps({
   settings: Object,
@@ -336,7 +337,7 @@ const breadcrumbs = [
               <!-- Total overview first -->
               <Widget
                 title="Total Balance"
-                :value="`৳${props.financials.totalBalance.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.totalBalance)}`"
                 gradientFrom="from-purple-500"
                 gradientTo="to-pink-400"
               />
@@ -344,7 +345,7 @@ const breadcrumbs = [
               <!-- What is usable right now -->
               <Widget
                 title="Available Balance"
-                :value="`৳${props.financials.availableBalance.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.availableBalance)}`"
                 gradientFrom="from-pink-500"
                 gradientTo="to-rose-400"
               />
@@ -352,13 +353,13 @@ const breadcrumbs = [
               <!-- Breakdowns -->
               <Widget
                 title="Current Cash"
-                :value="`৳${props.financials.currentCash.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.currentCash)}`"
                 gradientFrom="from-green-400"
                 gradientTo="to-teal-400"
               />
               <Widget
                 title="bKash Balance"
-                :value="`৳${props.financials.bkashBalance.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.bkashBalance)}`"
                 gradientFrom="from-blue-500"
                 gradientTo="to-cyan-400"
               />
@@ -366,13 +367,13 @@ const breadcrumbs = [
               <!-- Outflow / obligations -->
               <Widget
                 title="Withdrawn"
-                :value="`৳${props.financials.totalWithdrawn.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.totalWithdrawn)}`"
                 gradientFrom="from-yellow-500"
                 gradientTo="to-orange-400"
               />
               <Widget
                 title="Due Balance"
-                :value="`৳${props.financials.dueBalance.toLocaleString()}`"
+                :value="`${formatNumber(props.financials.dueBalance)}`"
                 gradientFrom="from-red-500"
                 gradientTo="to-pink-500"
               />

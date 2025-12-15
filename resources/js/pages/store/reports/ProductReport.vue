@@ -5,6 +5,7 @@ import { ref, watch, reactive, computed } from "vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+import { formatNumber } from "@/utils/helper";
 
 /**
  * Action Store Settings
@@ -24,7 +25,7 @@ const props = defineProps({
   bestProfitableCategory: Object,
 });
 
-console.log(props.dailyReport)
+console.log(props.dailyReport);
 
 // Make reactive copies
 const reactiveReport = reactive({
@@ -98,7 +99,6 @@ function applyRange() {
     },
   });
 }
-
 
 const aggregatedCategories = computed(() => {
   return Array.from(
@@ -209,7 +209,7 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Total Sales</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ reactiveReport.total_product_sales }}
+            BDT {{formatNumber(reactiveReport.total_product_sales)}}
           </p>
         </div>
 
@@ -220,7 +220,7 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Profit</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ reactiveReport.total_profit }}
+            BDT {{formatNumber(reactiveReport.total_profit)}}
           </p>
         </div>
 
@@ -231,10 +231,10 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Top Profit Category</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ reactiveReport.bestProfitableCategory?.name || "No data" }}
+            {{ reactiveReport.bestProfitableCategory?.name || "N/A" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Profit: BDT {{ reactiveReport.bestProfitableCategory?.profit || 0 }}
+            Profit: BDT {{formatNumber(reactiveReport.bestProfitableCategory?.profit || 0)}}
           </p>
         </div>
 
@@ -245,10 +245,11 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Best Seller</h3>
           </div>
           <p class="text-lg font-semibold text-gray-900 mt-2">
-            {{ reactiveReport.bestSellingCategory?.name || "No data" }}
+            {{ reactiveReport.bestSellingCategory?.name || "N/A" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Sales: {{ reactiveReport.bestSellingCategory?.sales || 0 }}
+            Sales:
+            {{ formatNumber(reactiveReport.bestSellingCategory?.sales || 0) }}
           </p>
         </div>
       </div>
@@ -405,14 +406,15 @@ const breadcrumbs = [
                     :key="date + '-' + category + '-sale'"
                     class="border border-gray-300 px-2 py-2 text-left text-green-700 bg-white"
                   >
-                   Qty {{ day.categories[category]?.product_quantity ?? 0}} | Sales {{ day.categories[category]?.product_sales ?? 0 }}
+                    Qty {{ day.categories[category]?.product_quantity ?? 0 }} | Sales
+                    {{ formatNumber(day.categories[category]?.product_sales ?? 0) }}
                   </td>
 
                   <!-- Total Sales -->
                   <td
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
-                    {{ day.total_sales }}
+                    {{ formatNumber(day.total_sales) }}
                   </td>
 
                   <!-- Cost per category -->
@@ -421,14 +423,14 @@ const breadcrumbs = [
                     :key="date + '-' + category + '-cost'"
                     class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
                   >
-                    {{ day.categories[category]?.product_cost ?? 0 }}
+                    {{ formatNumber(day.categories[category]?.product_cost ?? 0) }}
                   </td>
 
                   <!-- Total Cost -->
                   <td
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
-                    {{ day.total_cost }}
+                    {{ formatNumber(day.total_cost) }}
                   </td>
                 </tr>
 

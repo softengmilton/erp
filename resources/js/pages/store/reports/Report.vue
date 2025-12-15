@@ -5,6 +5,7 @@ import { ref, watch } from "vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import StoreSetting, { initStoreSetting } from "@/utils/module/StoreSetting";
+import { formatNumber } from "@/utils/helper";
 
 /**
  * Action store settings
@@ -163,7 +164,7 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Total Sales</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ props.allCategorySales }}
+            BDT {{formatNumber(props.allCategorySales)}}
           </p>
         </div>
 
@@ -174,7 +175,7 @@ const breadcrumbs = [
             <h3 class="text-sm font-medium text-gray-500">Profit</h3>
           </div>
           <p class="text-2xl font-bold text-gray-900 mt-2">
-            BDT {{ props.allCategoryProfit }}
+            BDT {{formatNumber(props.allCategoryProfit)}}
           </p>
         </div>
 
@@ -188,7 +189,7 @@ const breadcrumbs = [
             {{ props.bestProfitableCategory?.name || "No data" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Profit: BDT {{ props.bestProfitableCategory?.profit || 0 }}
+            Profit: BDT {{ formatNumber(props.bestProfitableCategory?.profit || 0) }}
           </p>
         </div>
 
@@ -202,7 +203,7 @@ const breadcrumbs = [
             {{ props.bestSellingCategory?.name || "No data" }}
           </p>
           <p class="text-xs text-gray-500 mt-1">
-            Sales: {{ props.bestSellingCategory?.sales || 0 }}
+            Sales: {{ formatNumber(props.bestSellingCategory?.sales || 0) }}
           </p>
         </div>
       </div>
@@ -365,14 +366,14 @@ const breadcrumbs = [
                     :key="'sales-data-' + category"
                     class="border border-gray-300 px-4 py-2 text-right text-green-700 bg-white"
                   >
-                    {{ dayReport.categories[category]?.category_sales ?? 0 }}
+                    {{ formatNumber(dayReport.categories[category]?.category_sales ?? 0) }}
                   </td>
 
                   <!-- Total Sales -->
                   <td
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
-                    {{ dayReport.total_sales ?? 0 }}
+                    {{ formatNumber(dayReport.total_sales ?? 0) }}
                   </td>
 
                   <!-- Cost per category -->
@@ -381,35 +382,35 @@ const breadcrumbs = [
                     :key="'cost-data-' + category"
                     class="border border-gray-300 px-4 py-2 text-right text-red-600 bg-white"
                   >
-                    {{ dayReport.categories[category]?.category_unit_cost ?? 0 }}
+                    {{ formatNumber(dayReport.categories[category]?.category_unit_cost ?? 0) }}
                   </td>
 
                   <!-- Total Cost -->
                   <td
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
-                    {{ dayReport.total_cost ?? 0 }}
+                    {{ formatNumber(dayReport.total_cost ?? 0) }}
                   </td>
 
                   <!-- Expenses -->
                   <td
                     class="border border-gray-300 px-4 py-2 text-right font-semibold bg-gray-50"
                   >
-                    {{ dayReport.total_expense ?? 0 }}
+                    {{ formatNumber(dayReport.total_expense ?? 0) }}
                   </td>
 
                   <!-- Payment Columns -->
                   <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                    {{ dayReport.payments.cash ?? 0 }}
+                    {{ formatNumber(dayReport.payments.cash ?? 0)    }}
                   </td>
                   <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                    {{ dayReport.payments.bkash ?? 0 }}
+                    {{ formatNumber(dayReport.payments.bkash ?? 0) }}
                   </td>
                   <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                    {{ dayReport.payments.nagad ?? 0 }}
+                    {{ formatNumber(dayReport.payments.nagad ?? 0) }}
                   </td>
                   <td class="border border-gray-300 px-4 py-2 text-right bg-white">
-                    {{ dayReport.payments.due ?? 0 }}
+                    {{ formatNumber(dayReport.payments.due ?? 0) }}
                   </td>
                 </tr>
               </tbody>

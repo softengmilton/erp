@@ -57,14 +57,14 @@ class StockProductReportController extends Controller
                 ->where('source_type', 'sale')
                 ->where('store_product_id', $product->id)
                 ->get()
-                ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A')
-                ->map(fn ($group) => $group->sum('change_quantity'));
+                ->groupBy(fn($item) => $item->storeStock->invoice_number ?? 'N/A')
+                ->map(fn($group) => $group->sum('change_quantity'));
 
             // All stock items for this product grouped by invoice
             $stockItemsByInvoice = StoreStockItem::where('store_product_id', $product->id)
                 ->with('storeStock')
                 ->get()
-                ->groupBy(fn ($item) => $item->storeStock->invoice_number ?? 'N/A');
+                ->groupBy(fn($item) => $item->storeStock->invoice_number ?? 'N/A');
 
             // Per-invoice meta computation
             $invoiceMetaData = $stockItemsByInvoice->map(function ($items, $invoice) {
@@ -158,22 +158,22 @@ class StockProductReportController extends Controller
                 return [
                     'invoice_number' => $invoiceNumber,
                     'product_name' => $item->storeProduct->name ?? 'Unknown',
-                    'quantity' => $quantity,
-                    'unit_cost' => $unitCost,
-                    'shipping' => $shipping,
-                    'fees' => $fees,
-                    'costing_per_product' => $costingPerProduct,
-                    'sale_price' => $salePrice,
-                    'profit_per_product' => $profitPerProduct,
-                    'buy_price_asset' => $buyPriceAsset,
-                    'sale_price_asset' => $salePriceAsset,
-                    'sold_product' => $soldQty,
-                    'sold_buy_product_price' => $soldBuyProductPrice,
-                    'sold_product_price' => $totalSoldProductPrice,
-                    'total_profit_product' => $totalProfitProduct,
-                    'availble_stock' => $availableStock,
-                    'availble_asset_buy_price' => $availableAssetBuyPrice,
-                    'availble_asset_sale_price' => $availableAssetSalePrice,
+                    'quantity' => round($quantity, 2),
+                    'unit_cost' => round($unitCost, 2),
+                    'shipping' =>  round($shipping, 2),
+                    'fees' => round($fees, 2),
+                    'costing_per_product' => round($costingPerProduct, 2),
+                    'sale_price' => round($salePrice, 2),
+                    'profit_per_product' => round($profitPerProduct, 2),
+                    'buy_price_asset' => round($buyPriceAsset, 2),
+                    'sale_price_asset' => round($salePriceAsset, 2),
+                    'sold_product' => round($soldQty, 2),
+                    'sold_buy_product_price' => round($soldBuyProductPrice, 2),
+                    'sold_product_price' => round($totalSoldProductPrice, 2),
+                    'total_profit_product' => round($totalProfitProduct, 2),
+                    'availble_stock' => round($availableStock, 2),
+                    'availble_asset_buy_price' => round($availableAssetBuyPrice, 2),
+                    'availble_asset_sale_price' => round($availableAssetSalePrice, 2),
                 ];
             });
             // ->filter(function ($row) {
@@ -182,22 +182,22 @@ class StockProductReportController extends Controller
             // });
 
             // Sort per-product rows
-            $tableData = $tableData->sortByDesc(fn ($row) => $row['invoice_number'])->values();
+            $tableData = $tableData->sortByDesc(fn($row) => $row['invoice_number'])->values();
 
             // Product-level totals
             $grands = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'grand_buy_price_asset' => $tableData->sum('buy_price_asset'),
-                'grand_sale_price_asset' => $tableData->sum('sale_price_asset'),
-                'grand_sold_product' => $tableData->sum('sold_product'),
-                'grand_sold_buy_product_price' => $tableData->sum('sold_buy_product_price'),
-                'grand_sold_product_price' => $tableData->sum('sold_product_price'),
-                'grand_profit_product' => $tableData->sum('total_profit_product'),
-                'grand_initial_stock' => $tableData->sum('quantity'),
-                'grand_avaiable_stock' => $tableData->sum('availble_stock'),
-                'grand_availble_asset_buy_price' => $tableData->sum('availble_asset_buy_price'),
-                'grand_availble_asset_sale_price' => $tableData->sum('availble_asset_sale_price'),
+                'grand_buy_price_asset' =>  round($tableData->sum('buy_price_asset'), 2),
+                'grand_sale_price_asset' => round($tableData->sum('sale_price_asset'), 2),
+                'grand_sold_product' => round($tableData->sum('sold_product'), 2),
+                'grand_sold_buy_product_price' => round($tableData->sum('sold_buy_product_price'), 2),
+                'grand_sold_product_price' => round($tableData->sum('sold_product_price'), 2),
+                'grand_profit_product' => round($tableData->sum('total_profit_product'), 2),
+                'grand_initial_stock' => round($tableData->sum('quantity'), 2),
+                'grand_avaiable_stock' => round($tableData->sum('availble_stock'), 2),
+                'grand_availble_asset_buy_price' => round($tableData->sum('availble_asset_buy_price'), 2),
+                'grand_availble_asset_sale_price' => round($tableData->sum('availble_asset_sale_price'), 2),
             ];
 
             $allGrands[] = $grands;
@@ -234,15 +234,15 @@ class StockProductReportController extends Controller
                 'quantity' => collect($allGrands)->sum('grand_initial_stock'),
                 'costing_per_product' => '-',
                 'sale_price' => '-',
-                'buy_price_asset' => collect($allGrands)->sum('grand_buy_price_asset'),
-                'sale_price_asset' => collect($allGrands)->sum('grand_sale_price_asset'),
-                'sold_product' => collect($allGrands)->sum('grand_sold_product'),
-                'sold_buy_product_price' => collect($allGrands)->sum('grand_sold_buy_product_price'),
-                'sold_product_price' => collect($allGrands)->sum('grand_sold_product_price'),
-                'total_profit_product' => collect($allGrands)->sum('grand_profit_product'),
-                'availble_stock' => collect($allGrands)->sum('grand_avaiable_stock'),
-                'availble_asset_buy_price' => collect($allGrands)->sum('grand_availble_asset_buy_price'),
-                'availble_asset_sale_price' => collect($allGrands)->sum('grand_availble_asset_sale_price'),
+                'buy_price_asset' =>  round(collect($allGrands)->sum('grand_buy_price_asset'), 2),
+                'sale_price_asset' => round(collect($allGrands)->sum('grand_sale_price_asset'), 2),
+                'sold_product' => round(collect($allGrands)->sum('grand_sold_product'), 2),
+                'sold_buy_product_price' => round(collect($allGrands)->sum('grand_sold_buy_product_price'), 2),
+                'sold_product_price' => round(collect($allGrands)->sum('grand_sold_product_price'), 2),
+                'total_profit_product' => round(collect($allGrands)->sum('grand_profit_product'), 2),
+                'availble_stock' => round(collect($allGrands)->sum('grand_avaiable_stock'), 2),
+                'availble_asset_buy_price' => round(collect($allGrands)->sum('grand_availble_asset_buy_price'), 2),
+                'availble_asset_sale_price' => round(collect($allGrands)->sum('grand_availble_asset_sale_price'), 2),
             ];
 
             $allTableData->push($finalGrand);
