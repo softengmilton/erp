@@ -22,41 +22,31 @@ class DashboardController extends Controller
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
 
-        // ✅ YEAR RANGE
         $yearStart = Carbon::now()->startOfYear();
         $yearEnd = Carbon::now()->endOfYear();
 
         // SALES
-        $todaySales = StoreOrder::whereBetween('created_at', [$todayStart, $todayEnd])
-            ->sum('total_amount');
-
-        $monthSales = StoreOrder::whereBetween('created_at', [$monthStart, $monthEnd])
-            ->sum('total_amount');
-
-        $yearSales = StoreOrder::whereBetween('created_at', [$yearStart, $yearEnd])
-            ->sum('total_amount');
+        $todaySales = StoreOrder::whereBetween('created_at', [$todayStart, $todayEnd])->sum('total_amount');
+        $monthSales = StoreOrder::whereBetween('created_at', [$monthStart, $monthEnd])->sum('total_amount');
+        $yearSales = StoreOrder::whereBetween('created_at', [$yearStart, $yearEnd])->sum('total_amount');
+        $allSales = StoreOrder::sum('total_amount');
 
         $totalDue = StoreOrder::where('due_amount', '>', 0)->sum('due_amount');
 
         // EXPENSES
-        $expensesData = $this->getExpensesData(
-            $todayStart,
-            $todayEnd,
-            $monthStart,
-            $monthEnd,
-            $yearStart,
-            $yearEnd
-        );
+        $expensesData = $this->getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd, $yearStart, $yearEnd);
+
+        // REVENUE
+        $todayRevenue = $this->calculateRevenue($todayStart, $todayEnd);
+        $monthRevenue = $this->calculateRevenue($monthStart, $monthEnd);
+        $yearRevenue = $this->calculateRevenue($yearStart, $yearEnd);
+        $allRevenue = $this->calculateRevenue(); // no dates = all-time
+
 
         // PRODUCT COUNT
         $productCount = StoreStockItem::where('quantity', '>', 0)
             ->distinct('store_product_id')
             ->count('store_product_id');
-
-        // REVENUE
-        $todayRevenue = $todaySales - ($expensesData['today'] ?? 0);
-        $monthRevenue = $monthSales - ($expensesData['month'] ?? 0);
-        $yearRevenue  = $yearSales - ($expensesData['year'] ?? 0);
 
         // CHART DATA
         $monthlyChartData = $this->getMonthlyChartData();
@@ -68,11 +58,13 @@ class DashboardController extends Controller
                 'today' => $todaySales,
                 'month' => $monthSales,
                 'year'  => $yearSales,
+                'all'   => $allSales,
             ],
             'revenue' => [
                 'today' => $todayRevenue,
                 'month' => $monthRevenue,
                 'year'  => $yearRevenue,
+                'all'   => $allRevenue,
             ],
             'products' => $productCount,
             'due' => $totalDue,
@@ -86,66 +78,24 @@ class DashboardController extends Controller
             'widgets' => $widgets,
             'monthlyData' => $monthlyChartData,
             'salesByType' => $salesByTypeData,
-            'productTypes' => StoreProductType::all()
+            'productTypes' => StoreProductType::all(),
         ]);
     }
 
     /**
      * Get expenses data including operational and product costs
      */
-    private function getExpensesData(
-        $todayStart,
-        $todayEnd,
-        $monthStart,
-        $monthEnd,
-        $yearStart,
-        $yearEnd
-    ) {
+    private function getExpensesData($todayStart, $todayEnd, $monthStart, $monthEnd, $yearStart, $yearEnd)
+    {
         // Operational expenses
         $todayOperational = StoreExpense::whereBetween('created_at', [$todayStart, $todayEnd])->sum('amount');
         $monthOperational = StoreExpense::whereBetween('created_at', [$monthStart, $monthEnd])->sum('amount');
         $yearOperational  = StoreExpense::whereBetween('created_at', [$yearStart, $yearEnd])->sum('amount');
 
         // Product costs (COGS)
-        $todayProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($todayStart, $todayEnd) {
-            $q->whereBetween('created_at', [$todayStart, $todayEnd]);
-        })->get()->sum(function ($item) {
-            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
-            if (!$stockItem) return 0;
-
-            // Use the same fields as month/year
-            $unitCost = ($stockItem->unit_cost ?? 0)
-                + ($stockItem->shipping_cost_unit ?? 0)
-                + ($stockItem->other_fees_unit ?? 0);
-
-            return $item->quantity * $unitCost;
-        });
-
-        $monthProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($monthStart, $monthEnd) {
-            $q->whereBetween('created_at', [$monthStart, $monthEnd]);
-        })->get()->sum(function ($item) {
-            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
-            if (!$stockItem) return 0;
-
-            $unitCost = ($stockItem->unit_cost ?? 0)
-                + ($stockItem->shipping_cost_unit ?? 0)
-                + ($stockItem->other_fees_unit ?? 0);
-
-            return $item->quantity * $unitCost;
-        });
-
-        $yearProductCosts = StoreOrderItem::whereHas('storeOrder', function ($q) use ($yearStart, $yearEnd) {
-            $q->whereBetween('created_at', [$yearStart, $yearEnd]);
-        })->get()->sum(function ($item) {
-            $stockItem = \App\Models\StoreStockItem::find($item->store_stock_item_id);
-            if (!$stockItem) return 0;
-
-            $unitCost = ($stockItem->unit_cost ?? 0)
-                + ($stockItem->shipping_cost_unit ?? 0)
-                + ($stockItem->other_fees_unit ?? 0);
-
-            return $item->quantity * $unitCost;
-        });
+        $todayProductCosts = $this->getProductCosts($todayStart, $todayEnd);
+        $monthProductCosts = $this->getProductCosts($monthStart, $monthEnd);
+        $yearProductCosts  = $this->getProductCosts($yearStart, $yearEnd);
 
         return [
             'today' => $todayOperational + $todayProductCosts,
@@ -153,6 +103,86 @@ class DashboardController extends Controller
             'year'  => $yearOperational + $yearProductCosts,
         ];
     }
+
+    /**
+     * Calculate product costs (COGS) for a given period
+     */
+    private function getProductCosts($start, $end)
+    {
+        return StoreOrderItem::whereHas('storeOrder', function ($q) use ($start, $end) {
+            $q->whereBetween('created_at', [$start, $end]);
+        })->get()->sum(function ($item) {
+            $stockItem = StoreStockItem::find($item->store_stock_item_id);
+            if (!$stockItem) return 0;
+
+            $unitCost = ($stockItem->unit_cost ?? 0)
+                + ($stockItem->shipping_cost_unit ?? 0)
+                + ($stockItem->other_fees_unit ?? 0);
+
+            return $item->quantity * $unitCost;
+        });
+    }
+
+    /**
+     * Get all-time product costs (COGS for all orders)
+     */
+    private function getAllTimeProductCosts()
+    {
+        return StoreOrderItem::all()->sum(function ($item) {
+            $stockItem = StoreStockItem::find($item->store_stock_item_id);
+            if (!$stockItem) return 0;
+
+            $unitCost = ($stockItem->unit_cost ?? 0)
+                + ($stockItem->shipping_cost_unit ?? 0)
+                + ($stockItem->other_fees_unit ?? 0);
+
+            return $item->quantity * $unitCost;
+        });
+    }
+
+    /**
+     * Calculate all-time revenue
+     */
+    /**
+     * Calculate revenue for a given period
+     */
+    private function calculateRevenue($start = null, $end = null)
+    {
+        // Orders in range
+        $ordersQuery = StoreOrder::query();
+        if ($start && $end) {
+            $ordersQuery->whereBetween('created_at', [$start, $end]);
+        }
+        $orders = $ordersQuery->get();
+
+        $totalSales = $orders->sum('total_amount');
+
+        $totalCosts = 0;
+
+        foreach ($orders as $order) {
+            $orderItems = $order->storeOrderItems; // assuming relation StoreOrder->items()
+            foreach ($orderItems as $item) {
+                $stockItem = StoreStockItem::find($item->store_stock_item_id);
+                if (!$stockItem) continue;
+
+                $unitCost = ($stockItem->unit_cost ?? 0)
+                    + ($stockItem->shipping_cost_unit ?? 0)
+                    + ($stockItem->other_fees_unit ?? 0);
+
+                $totalCosts += $item->quantity * $unitCost;
+            }
+        }
+
+        // Operational expenses
+        $expensesQuery = StoreExpense::query();
+        if ($start && $end) {
+            $expensesQuery->whereBetween('created_at', [$start, $end]);
+        }
+        $operationalExpenses = $expensesQuery->sum('amount');
+
+        return $totalSales - ($totalCosts + $operationalExpenses);
+    }
+
 
     /**
      * Get monthly revenue and expenses for last 12 months
