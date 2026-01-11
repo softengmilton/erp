@@ -22,18 +22,106 @@ const props = defineProps({
 const selectedCategory = ref(props.filters.category_id || "");
 
 // Month-Year picker (single month)
-// Month-Year picker (single month)
 const selectedMonth = ref(
   props.filters.month
     ? (() => {
         const [year, month] = props.filters.month.split("-").map(Number);
-        return { year, month: month - 1 }; // VueDatePicker expects 0-based month
+        return { year, month: month - 1 }; // 0-based month for VueDatePicker
       })()
-    : (() => {
-        const now = new Date();
-        return { year: now.getFullYear(), month: now.getMonth() }; // current month
-      })()
+    : { year: new Date().getFullYear(), month: new Date().getMonth() }
 );
+
+const tableRef = ref(null);
+
+/* -----------------------------
+   CSV Export
+----------------------------- */
+function exportTableToCSV() {
+  const table = tableRef.value;
+  if (!table) return;
+
+  const rows = Array.from(table.querySelectorAll("tr"));
+  const matrix = [];
+
+  rows.forEach((row, r) => {
+    matrix[r] = matrix[r] || [];
+    const cells = Array.from(row.querySelectorAll("th, td"));
+    let col = 0;
+    for (const cell of cells) {
+      while (matrix[r][col] !== undefined) col++;
+      const text = (cell.innerText || "").trim().replace(/\r?\n|\r/g, " ");
+      const rowspan = parseInt(cell.getAttribute("rowspan") || "1", 10);
+      const colspan = parseInt(cell.getAttribute("colspan") || "1", 10);
+      for (let i = 0; i < rowspan; i++) {
+        for (let j = 0; j < colspan; j++) {
+          matrix[r + i] = matrix[r + i] || [];
+          matrix[r + i][col + j] = text;
+        }
+      }
+      col += colspan;
+    }
+  });
+
+  const maxCols = Math.max(0, ...matrix.map((row) => (row ? row.length : 0)));
+  const csvRows = matrix.map((row) => {
+    const cells = [];
+    for (let c = 0; c < maxCols; c++) {
+      const cell = row && row[c] !== undefined ? row[c] : "";
+      cells.push(`"${String(cell).replace(/"/g, '""')}"`);
+    }
+    return cells.join(",");
+  });
+
+  const csvString = "\uFEFF" + csvRows.join("\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute("download", "stock_report.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/* -----------------------------
+   Print Table
+----------------------------- */
+function printTable() {
+  if (!tableRef.value) return;
+
+  const tableHTML = tableRef.value.outerHTML;
+  const style = `
+    <style>
+      body { font-family: sans-serif; padding: 20px; }
+      table { border-collapse: collapse; width: 100%; font-size: 12px; }
+      th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+      th { background: #f4f4f4; font-weight: bold; }
+      td { background: #fff; }
+      th, td { page-break-inside: avoid; }
+      thead { display: table-header-group; } /* repeat header on multiple pages */
+      tr { page-break-inside: avoid; }
+      body { -webkit-print-color-adjust: exact; }
+    </style>
+  `;
+
+  const printWindow = window.open("", "_blank", "width=900,height=650");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Stock Report</title>
+        ${style}
+      </head>
+      <body>
+        <h2 style="text-align:center; margin-bottom:20px;">Stock Report</h2>
+        ${tableHTML}
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+}
 
 
 /* -----------------------------
@@ -42,28 +130,21 @@ const selectedMonth = ref(
 watch(
   [selectedCategory, selectedMonth],
   ([category, month]) => {
-    // If month is null (cleared), skip
-    if (!month) return;
-
-    // Ensure month is a Date instance
-    // const date = month instanceof Date ? month : new Date(month);
-    // const monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-    console.log("Selected Month:", selectedMonth.value.month);
-    console.log("Selected Category:", category);
+    const monthStr = month
+      ? `${month.year}-${String(month.month + 1).padStart(2, "0")}`
+      : null;
 
     router.get(
       "/store/stock-reports",
       {
-        month: month ? selectedMonth.value.year + "-" + String(selectedMonth.value.month + 1).padStart(2, "0") : null,
+        month: monthStr,
         category_id: category || null,
       },
       { preserveState: true, replace: true }
     );
   },
-  { immediate: true } // ✅ Trigger immediately on mount
+  { immediate: true }
 );
-
 
 /* -----------------------------
    Breadcrumbs
@@ -82,6 +163,16 @@ const breadcrumbs = [
 
       <!-- Filters -->
       <div class="flex flex-wrap gap-4 items-center rounded-lg bg-gray-50 p-4 shadow">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex gap-2">
+            <button @click="exportTableToCSV" class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 shadow-sm hover:bg-gray-50">
+              📄 Export CSV
+            </button>
+            <button @click="printTable" class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 shadow-sm hover:bg-gray-50">
+              🖨 Print
+            </button>
+          </div>
+        </div>
 
         <!-- Month-Year Picker -->
         <div class="min-w-[220px]">
@@ -99,26 +190,18 @@ const breadcrumbs = [
 
         <!-- Category -->
         <div class="min-w-[200px]">
-          <select
-            v-model="selectedCategory"
-            class="w-full rounded border border-gray-300 p-2"
-          >
+          <select v-model="selectedCategory" class="w-full rounded border border-gray-300 p-2">
             <option value="">All Categories</option>
-            <option
-              v-for="cat in props.allCategory"
-              :key="cat.id"
-              :value="cat.id"
-            >
+            <option v-for="cat in props.allCategory" :key="cat.id" :value="cat.id">
               {{ cat.name }}
             </option>
           </select>
         </div>
-
       </div>
 
       <!-- Report Table -->
       <div v-if="Object.keys(props.report).length" class="overflow-x-auto">
-        <table class="min-w-full border-collapse border border-black text-sm">
+        <table ref="tableRef" class="min-w-full border-collapse border border-black text-sm">
           <thead class="bg-gray-100">
             <tr>
               <th class="border px-4 py-2 text-left">Invoice</th>
@@ -140,9 +223,7 @@ const breadcrumbs = [
                   <td class="border px-4 py-2">{{ row.sold_qty }}</td>
                   <td class="border px-4 py-2">{{ row.adjustment }}</td>
                   <td class="border px-4 py-2">{{ row.available_stock }}</td>
-                  <td class="border px-4 py-2">
-                    ৳{{ formatNumber(row.total_sale) }}
-                  </td>
+                  <td class="border px-4 py-2">৳{{ formatNumber(row.total_sale || 0) }}</td>
                 </tr>
               </template>
             </template>
